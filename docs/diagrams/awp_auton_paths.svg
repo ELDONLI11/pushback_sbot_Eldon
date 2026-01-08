@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <defs>
+    <style>
+      .title { font: 20px sans-serif; font-weight: 700; }
+      .subtitle { font: 14px sans-serif; }
+      .label { font: 12px sans-serif; }
+      .tiny { font: 11px sans-serif; }
+      .grid { stroke: #d0d0d0; stroke-width: 1; }
+      .axis { stroke: #808080; stroke-width: 2; }
+      .path { fill: none; stroke: #1f77b4; stroke-width: 3; }
+      .path2 { fill: none; stroke: #d62728; stroke-width: 3; }
+      .dash { stroke-dasharray: 6 6; }
+      .pt { fill: #111; }
+      .pt2 { fill: #d62728; }
+      .note { font: 12px sans-serif; fill: #222; }
+      .box { fill: #f6f6f6; stroke: #c0c0c0; stroke-width: 1; }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f77b4" />
+    </marker>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="10" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#d62728" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="760" fill="#ffffff" />
+
+  <text x="24" y="38" class="title">AWP Half (SBOT) — Planned Paths (current tuning)</text>
+  <text x="24" y="62" class="subtitle">Based on waypoints in autonomous_sbot.cpp. Left panel = Red Left canonical (front-score Center Goal–Lower, then Loader→Long Goal end back-in). Right panel = Red Right canonical (back-score Center Goal–Lower, then Loader→Long Goal end via tuned approach).</text>
+  <text x="24" y="84" class="subtitle">Blue variants are the same path rotated 180° (per code).</text>
+
+  <!-- Legend -->
+  <g transform="translate(24,102)">
+    <rect class="box" x="0" y="0" width="610" height="64" rx="6" />
+    <path class="path" d="M 16 20 L 100 20" marker-end="url(#arrow)" />
+    <text class="label" x="114" y="24">Stage order polyline</text>
+
+    <circle class="pt" cx="18" cy="42" r="5" />
+    <text class="label" x="32" y="46">Waypoint</text>
+
+    <path class="path2 dash" d="M 230 20 L 314 20" marker-end="url(#arrow2)" />
+    <text class="label" x="328" y="24">Back-in segment (distance param)</text>
+
+    <text class="tiny" x="230" y="46">Axes: +Y into field, +X to robot-right at start pose (per code)</text>
+  </g>
+
+  <!-- Helper: chart function is duplicated manually below -->
+
+  <!-- Panel: Red Left -->
+  <g transform="translate(40,190)">
+    <text x="0" y="-18" class="title">Red Left (and Blue Right)</text>
+    <text x="0" y="2" class="subtitle">First score: Center Goal – Lower (front). Final score: near end of Long Goal adjacent to Loader 1 (back-in).</text>
+
+    <!-- Plot area -->
+    <rect x="0" y="10" width="640" height="520" fill="#ffffff" stroke="#c0c0c0" />
+
+    <!-- Coordinate transform: inches domain to pixels -->
+    <!-- Domain: x∈[-48,48], y∈[-36,60] mapped into 640x520 with margins -->
+    <!-- We'll use a 40px margin and non-square scaling: sx= (640-80)/96 = 5.833..., sy=(520-80)/96 = 4.583... -->
+
+    <!-- Grid (every 12") -->
+    <g>
+      <!-- vertical grid lines x = -36,-24,-12,0,12,24,36 -->
+      <line class="grid" x1="110.00" y1="50" x2="110.00" y2="490" />
+      <line class="grid" x1="180.00" y1="50" x2="180.00" y2="490" />
+      <line class="grid" x1="250.00" y1="50" x2="250.00" y2="490" />
+      <line class="grid" x1="320" y1="50" x2="320" y2="490" />
+      <line class="grid" x1="390.00" y1="50" x2="390.00" y2="490" />
+      <line class="grid" x1="460.00" y1="50" x2="460.00" y2="490" />
+      <line class="grid" x1="530.00" y1="50" x2="530.00" y2="490" />
+
+      <!-- horizontal grid lines y = -24,-12,0,12,24,36,48,60 -->
+      <line class="grid" x1="40" y1="436.11" x2="600" y2="436.11" />
+      <line class="grid" x1="40" y1="381.11" x2="600" y2="381.11" />
+      <line class="grid" x1="40" y1="326.11" x2="600" y2="326.11" />
+      <line class="grid" x1="40" y1="271.11" x2="600" y2="271.11" />
+      <line class="grid" x1="40" y1="216.11" x2="600" y2="216.11" />
+      <line class="grid" x1="40" y1="161.11" x2="600" y2="161.11" />
+      <line class="grid" x1="40" y1="106.11" x2="600" y2="106.11" />
+      <line class="grid" x1="40" y1="51.11" x2="600" y2="51.11" />
+    </g>
+
+    <!-- Axes -->
+    <line class="axis" x1="320" y1="50" x2="320" y2="490" />
+    <line class="axis" x1="40" y1="326.11" x2="600" y2="326.11" />
+    <text class="label" x="606" y="275">+X</text>
+    <text class="label" x="324" y="46">+Y</text>
+    <text class="tiny" x="44" y="508">Origin (0,0) = start pose set in code</text>
+
+    <!-- Waypoints (Red Left canonical tuning) -->
+           <!-- Points used (inches):
+            Start (0,0)
+            Clear barrier (relative +10" forward): shown as (0,10)
+            Cluster1 (-9,22.5)
+            Cluster1 sweep (-9,28.5)
+            Center Goal – Lower contact (Jerry) => pose target (~0.7,32.2)
+            Post-score retreat (-33,-1.5)
+            Tube contact (-33,-4.5)  (front bumper)
+            Tube pose target (-33,3.0)
+            Long Goal end contact (-33,43.5) (back bumper)
+            Long Goal pose target (-33,36.0)
+            Back-in segment (pose): 33" straight north (no X change)
+          -->
+
+    <!-- Polyline path for Red Left (blue stroke) -->
+    <!-- Mapping helper:
+         px = 40 + (x+48)*5.8333333
+         py = 51.11 + (60-y)*4.5833333
+    -->
+    <path class="path" marker-end="url(#arrow)" d="
+      M 320 326.11
+      L 320 280.28
+      L 267.50 222.99
+      L 267.50 195.49
+      L 324.07 178.21
+      L 127.50 332.99
+      L 127.50 312.36
+    " />
+
+    <path class="path2 dash" marker-end="url(#arrow2)" d="
+      M 127.50 312.36
+      L 127.50 161.11
+    " />
+
+    <!-- Back-in segment (dashed red) intentionally omitted here (RL uses relative forward/back in current plan) -->
+
+    <!-- Points as dots + labels -->
+    <g>
+      <circle class="pt" cx="320" cy="326.11" r="5" />
+      <text class="label" x="330" y="275">Start (0,0)</text>
+
+      <circle class="pt" cx="320" cy="280.28" r="5" />
+      <text class="label" x="330" y="214">Clear barrier (~+10")</text>
+
+      <circle class="pt" cx="267.50" cy="222.99" r="5" />
+      <text class="label" x="252" y="140">Cluster1 (-9,22.5)</text>
+
+      <circle class="pt" cx="267.50" cy="195.49" r="5" />
+      <text class="label" x="205" y="92">Cluster sweep (-9,28.5)</text>
+
+      <circle class="pt" cx="324.07" cy="178.21" r="5" />
+      <text class="label" x="306" y="26">Center Goal – Lower pose (~0.7,32.2)</text>
+
+      <circle class="pt" cx="127.50" cy="332.99" r="5" />
+      <text class="label" x="137" y="337">Retreat (-33,-1.5)</text>
+
+      <circle class="pt" cx="127.50" cy="312.36" r="5" />
+      <text class="label" x="137" y="316">Tube pose (-33,3.0)</text>
+
+      <circle class="pt" cx="127.50" cy="161.11" r="5" />
+      <text class="label" x="137" y="166">Long Goal pose (-33,36.0)</text>
+
+      <text class="note" x="210" y="486">RL: retreat (-33,-1.5) → tube pose (-33,3.0) (front bumper @ y=-4.5), then 33\" north to long-goal pose (-33,36.0) (back bumper @ y=43.5)</text>
+    </g>
+  </g>
+
+  <!-- Panel: Red Right -->
+  <g transform="translate(720,190)">
+    <text x="0" y="-18" class="title">Red Right (and Blue Left)</text>
+    <text x="0" y="2" class="subtitle">First score: Center Goal – Middle (back). Final score: near end of Long Goal adjacent to Loader (default approach point).</text>
+
+    <rect x="0" y="10" width="640" height="520" fill="#ffffff" stroke="#c0c0c0" />
+
+    <!-- Grid -->
+    <g>
+      <line class="grid" x1="110.00" y1="50" x2="110.00" y2="490" />
+      <line class="grid" x1="180.00" y1="50" x2="180.00" y2="490" />
+      <line class="grid" x1="250.00" y1="50" x2="250.00" y2="490" />
+      <line class="grid" x1="320" y1="50" x2="320" y2="490" />
+      <line class="grid" x1="390.00" y1="50" x2="390.00" y2="490" />
+      <line class="grid" x1="460.00" y1="50" x2="460.00" y2="490" />
+      <line class="grid" x1="530.00" y1="50" x2="530.00" y2="490" />
+
+      <line class="grid" x1="40" y1="436.11" x2="600" y2="436.11" />
+      <line class="grid" x1="40" y1="381.11" x2="600" y2="381.11" />
+      <line class="grid" x1="40" y1="326.11" x2="600" y2="326.11" />
+      <line class="grid" x1="40" y1="271.11" x2="600" y2="271.11" />
+      <line class="grid" x1="40" y1="216.11" x2="600" y2="216.11" />
+      <line class="grid" x1="40" y1="161.11" x2="600" y2="161.11" />
+      <line class="grid" x1="40" y1="106.11" x2="600" y2="106.11" />
+      <line class="grid" x1="40" y1="51.11" x2="600" y2="51.11" />
+    </g>
+
+    <!-- Axes -->
+    <line class="axis" x1="320" y1="50" x2="320" y2="490" />
+    <line class="axis" x1="40" y1="326.11" x2="600" y2="326.11" />
+    <text class="label" x="606" y="275">+X</text>
+    <text class="label" x="324" y="46">+Y</text>
+    <text class="tiny" x="44" y="508">Origin (0,0) = start pose set in code</text>
+
+           <!-- Points used (inches):
+            Start (0,0)
+            Clear barrier (0,10)
+            Cluster1 (10,22)
+            Cluster1 sweep (16,30)
+            Center Middle approach (cluster sweep + (0,13)) (16,43)
+             Post-score retreat (straight back-out 42") (16,85)
+            Loader1 (14,16)
+            Loader1 pulloff (10,20)
+            Long Goal end approach (placeholder) high_goal_approach (-6,14)
+          -->
+
+    <!-- Path polyline (blue): start -> clear -> cluster -> sweep -> center lower(back) -> retreat -> loader1 -> pulloff -> long goal end approach -->
+    <path class="path" marker-end="url(#arrow)" d="
+      M 320 326.11
+      L 320 280.28
+      L 378.33 225.28
+      L 413.33 188.61
+      L 413.33 142.78
+      L 413.33 -112.22
+      L 401.67 243.61
+      L 378.33 225.28
+      L 285.00 243.61
+    " />
+
+    <!-- Points + labels -->
+    <g>
+      <circle class="pt" cx="320" cy="326.11" r="5" />
+      <text class="label" x="330" y="275">Start (0,0)</text>
+
+      <circle class="pt" cx="320" cy="280.28" r="5" />
+      <text class="label" x="330" y="214">Clear barrier (~+10")</text>
+
+      <circle class="pt" cx="378.33" cy="225.28" r="5" />
+      <text class="label" x="408" y="140">Cluster1 (10,22)</text>
+
+      <circle class="pt" cx="413.33" cy="188.61" r="5" />
+      <text class="label" x="454" y="92">Cluster sweep (16,30)</text>
+
+      <circle class="pt" cx="180.00" cy="188.61" r="5" />
+      <text class="label" x="330" y="26">Center Goal – Middle pose (-24,30) (from contact)</text>
+
+      <circle class="pt" cx="413.33" cy="-112.22" r="5" />
+      <text class="label" x="454" y="-244">Retreat (16,85)</text>
+
+      <circle class="pt" cx="401.67" cy="243.61" r="5" />
+      <text class="label" x="438" y="190">Loader1 (14,16)</text>
+
+      <circle class="pt" cx="378.33" cy="225.28" r="5" />
+      <text class="label" x="408" y="156">Loader1 pull-off (10,20)</text>
+
+      <circle class="pt" cx="285.00" cy="243.61" r="5" />
+      <text class="label" x="283" y="190">Long Goal end approach (-6,14) (placeholder)</text>
+
+      <text class="note" x="40" y="486">Note: Red Right uses default approach point (no back-in distance param)</text>
+      <text class="note" x="40" y="504">t.high_goal_back_in_from_tube_in = 0.0</text>
+    </g>
+  </g>
+
+  <!-- Footer notes -->
+  <g transform="translate(24,732)">
+    <text class="tiny" x="0" y="0">If you want this to match the real field drawing exactly, the next step is replacing these placeholder inch-waypoints with measurements from Appendix A object placement (Page_A-6 / Page_A-7) and your robot’s scoring standoff distances.</text>
+  </g>
+</svg>

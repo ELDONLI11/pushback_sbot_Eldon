@@ -27,7 +27,9 @@ void SbotIntake::update() {
             helper_speed = SBOT_INTAKE_FORWARD_SPEED;
             break;
         case IntakeMode::REVERSE_LOW_GOAL:
-            main_speed = SBOT_INTAKE_REVERSE_LOW_GOAL;
+            // For low-goal scoring, run the main intake slower to reduce jam/whip,
+            // while keeping the helper assisting the outflow.
+            main_speed = static_cast<int>(SBOT_INTAKE_REVERSE_LOW_GOAL * 0.25);
             helper_speed = SBOT_INTAKE_REVERSE_LOW_GOAL;
             break;
         case IntakeMode::OFF:

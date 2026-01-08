@@ -1,0 +1,63 @@
+=== SBOT INITIALIZE START ===
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+Initializing LemLib for sbot...
+Calibrating sbot chassis (IMU/odometry)...
+Sbot LemLib initialization complete.
+SBOT: subsystems created; defaults applied
+SBOT: development mode (no competition control). Auto select open for 10s.
+SBOT AUTO: select 0 (DISABLED) [L/R to change, A to confirm]
+SBOT: auto select... 10s left
+SBOT AUTO: select 1 (Red Left) [L/R to change, A to confirm]
+SBOT: auto select... 9s left
+SBOT AUTO: READY 1 (Red Left)
+SBOT: auto mode confirmed
+SBOT: DEV MODE running selected autonomous mode: 1
+SBOT AUTON: AWP HALF (RED LEFT)
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT POSE [awp start]: x=0.00 y=-0.00 th=-0.04
+AWP STAGE 1: cluster collect
+SBOT WAIT [match.drive_to.cluster1]: 900 ms
+SBOT WAIT [match.drive_to.cluster1_sweep]: 350 ms
+SBOT POSE [after cluster]: x=-11.22 y=27.81 th=-18.80
+AWP STAGE 2: CENTER LOWER (front score)
+SBOT WAIT [match.turn_to]: 920 ms
+SBOT WAIT [match.turn_to.fine]: 60 ms
+SBOT WAIT [match.turn_to.fine]: 60 ms
+CENTER LOWER contact->pose: contact(6.00,37.50) heading=45.0 front=7.50 => pose(0.70,32.20)
+SBOT WAIT [drive_relative]: 450 ms
+SBOT POSE [after center lower (front)]: x=-1.92 y=37.69 th=48.82
+AWP STAGE 3: retreat + face loader
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT WAIT [match.retreat]: 1060 ms
+SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+SBOT WAIT [match.turn_to]: 800 ms
+SBOT WAIT [match.turn_to.fine]: 900 ms
+SBOT WAIT [match.turn_to.fine]: 900 ms
+SBOT POSE [after retreat/turn]: x=-34.70 y=-9.25 th=183.39
+SBOT SENSORS [after retreat/turn]: imu.heading=183.45 imu.rotation=183.45 vertRot.pos=-84216.00 vert.in=-15.62
+AWP STAGE 4: loader1 pull
+SBOT WAIT [match.align_line_x]: 20 ms
+SBOT WAIT [match.align_line_x.retry]: 20 ms
+TUBE contact->pose: contact(-33.00,-24.50) heading=180.0 frontEff=13.50 => pose(-33.00,-11.00)
+SBOT WAIT [match.approach_tube]: 370 ms
+SBOT WAIT [drive_relative]: 900 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT WAIT [match.pulloff]: 390 ms
+SBOT POSE [after loader1 (relative)]: x=-34.65 y=-8.41 th=183.15
+AWP STAGE 5: second score
+AWP STAGE 5: LONG GOAL END (near loader)
+SBOT WAIT [drive_relative]: 5200 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT POSE [after high goal]: x=-33.48 y=18.05 th=144.82
+AWP STAGE 6: end safe
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT POSE [end safe (no move)]: x=-33.48 y=18.05 th=144.82
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT AUTON: AWP HALF complete
+SBOT: DEV MODE autonomous complete; entering opcontrol
+=== SBOT INITIALIZE COMPLETE ===
+=== SBOT OPCONTROL() ENTER ===
+=== SBOT DRIVER CONTROL START ===
+SBOT: opcontrol alive (25077 ms)
+SBOT: opcontrol alive (27077 ms)
+SBOT: opcontrol alive (29077 ms)
