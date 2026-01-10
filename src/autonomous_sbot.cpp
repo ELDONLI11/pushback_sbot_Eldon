@@ -20,7 +20,7 @@ static constexpr double SBOT_BACK_BUMPER_IN = 7.5;
 // Temporary: run match auton at reduced speed for tuning.
 // LemLib maxSpeed is typically in the 0..127-ish range.
 static constexpr int SBOT_MATCH_MAX_SPEED = 95;      // ~75%
-static constexpr int SBOT_MATCH_TURN_MAX_SPEED = 90; // ~75%
+static constexpr int SBOT_MATCH_TURN_MAX_SPEED = 80; // reduce turn slip during large heading changes
 
 // Debug aid: print how long each LemLib waitUntilDone() blocks.
 static constexpr bool SBOT_PRINT_WAIT_TIMES = true;
@@ -659,8 +659,8 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
         t.tube2_pulloff = {-18, -18};
 
         // Timeouts: keep reasonable so we don't burn match time if something is slightly off.
-        t.drive_timeout_ms = 3200;
-        t.turn_timeout_ms = 2000;
+        t.drive_timeout_ms = 4000;
+        t.turn_timeout_ms = 2400;
 
         t.end_safe = {0, 14};
         return t;
@@ -871,12 +871,14 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
         if (t.use_post_score_retreat_point) {
             // Do NOT turn here. Back straight to the retreat point, then turn at the retreat.
             const SbotPoint retreat = sbot_apply_alliance_transform_only(t.post_score_retreat_point, alliance_);
+            printf("RETREAT target: (%.2f, %.2f)\n", retreat.x, retreat.y);
             if (sbot_chassis) {
                 // Drive to the retreat point while reversing (keeps the retreat "straight back" concept,
                 // but actually lands on the desired endpoint instead of a 1D projection).
                 lemlib::MoveToPointParams params;
                 params.forwards = false;
-                params.maxSpeed = SBOT_MATCH_MAX_SPEED;
+                // Retreat accuracy matters a lot for the loader line-up; slow slightly to reduce skid/overshoot.
+                params.maxSpeed = 80;
                 params.minSpeed = 0;
                 params.earlyExitRange = 0;
                 sbot_chassis->moveToPoint(retreat.x, retreat.y, t.drive_timeout_ms, params);
@@ -925,6 +927,19 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
 
             // Red Left (and Blue Right): tube/long-goal are on the same X line.
             if (sbot_chassis) {
+                // First, explicitly get onto the shared X-line (tube + long goal).
+                {
+                    const auto pose0 = sbot_chassis->getPose();
+                    const double line_x = sbot_apply_alliance_transform_only({t.loader_long_goal_line_x, 0.0}, alliance_).x;
+                    lemlib::MoveToPointParams xParams;
+                    xParams.forwards = true;
+                    xParams.maxSpeed = 55;
+                    xParams.minSpeed = 0;
+                    xParams.earlyExitRange = 0;
+                    sbot_chassis->moveToPoint(line_x, pose0.y, 1600, xParams);
+                    sbot_wait_until_done_timed("match.align_line_x");
+                }
+
                 const double tube_heading = sbot_apply_alliance_transform_heading_only(t.tube_face_heading_deg, alliance_);
                 SbotPoint tube_pose_target = sbot_apply_alliance_transform_only(t.tube1, alliance_);
                 if (t.use_tube1_contact) {
@@ -957,7 +972,8 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                 poseParams.minSpeed = 0;
                 poseParams.earlyExitRange = 0;
                 poseParams.lead = 0.25;
-                sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, t.drive_timeout_ms, poseParams);
+                // Tube approach is where we see timeouts; give it extra completion window.
+                sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, t.drive_timeout_ms + 1200, poseParams);
                 sbot_wait_until_done_timed("match.approach_tube_pose");
 
                 // Small insertion push: still ending ~1" short in the latest run.
@@ -974,15 +990,11 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                 const SbotPoint pulloff = sbot_apply_alliance_transform_only(t.tube1_pulloff, alliance_);
                 const double tube_heading = sbot_apply_alliance_transform_heading_only(t.tube_face_heading_deg, alliance_);
 
-                // Back out while staying square (pose target).
-                lemlib::MoveToPoseParams poseParams;
-                poseParams.forwards = false;
-                poseParams.maxSpeed = 65;
-                poseParams.minSpeed = 0;
-                poseParams.earlyExitRange = 0;
-                poseParams.lead = 0.25;
-                sbot_chassis->moveToPose(pulloff.x, pulloff.y, tube_heading, t.drive_timeout_ms, poseParams);
-                sbot_wait_until_done_timed("match.pulloff");
+                // Back out using a short, robust relative move.
+                // The pulloff point is roughly 2-3" away; using odom-point pursuit here can time out.
+                (void)tube_heading;
+                (void)pulloff;
+                sbot_drive_relative(3.0, 900, false /* backwards */);
             }
             sbot_print_pose("after loader1 (relative)");
         } else {

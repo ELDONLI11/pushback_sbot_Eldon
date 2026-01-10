@@ -89,9 +89,9 @@ void initializeSbotLemLib() {
         30,   // kD
         0,    // windup
         0.5,  // small error (in)
-        10,   // small error timeout (ms)
+        150,  // small error timeout (ms)
         1.0,  // large error (in)
-        50,   // large error timeout (ms)
+        300,  // large error timeout (ms)
         0     // max acceleration
     );
 
@@ -101,9 +101,9 @@ void initializeSbotLemLib() {
         10.0, // kD
         0,    // windup
         1.0,  // small error (deg)
-        10,   // small error timeout (ms)
+        150,  // small error timeout (ms)
         3.0,  // large error (deg)
-        50,   // large error timeout (ms)
+        250,  // large error timeout (ms)
         0     // max acceleration
     );
 
