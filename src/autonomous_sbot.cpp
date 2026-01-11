@@ -117,6 +117,41 @@ static void sbot_wait_until_done_or_stalled_timed(
     }
 }
 
+struct SbotPoint;
+static void sbot_wait_until_done_or_stalled_near_target_timed(
+    const char* label,
+    uint32_t overall_timeout_ms,
+    uint32_t stall_window_ms,
+    double stall_epsilon_in,
+    const SbotPoint& target,
+    double stall_only_within_in
+);
+
+// Wait for motion to finish, but never cancel early due to "stall" heuristics.
+// This is useful when we're intentionally driving into contact (goals/walls), where odom translation can freeze
+// even while the drivetrain is still applying useful force.
+static void sbot_wait_until_done_or_timed_out_timed(const char* label, uint32_t overall_timeout_ms) {
+    if (!sbot_chassis) return;
+
+    const uint32_t start = pros::millis();
+    while (sbot_chassis->isInMotion() && (pros::millis() - start < overall_timeout_ms)) {
+        pros::delay(10);
+    }
+
+    const uint32_t dur = pros::millis() - start;
+    const bool timed_out = sbot_chassis->isInMotion();
+    if (timed_out) sbot_chassis->cancelAllMotions();
+
+    if (SBOT_PRINT_WAIT_TIMES) {
+        printf(
+            "SBOT WAIT [%s]: %u ms%s\n",
+            label,
+            dur,
+            timed_out ? " (timed out)" : ""
+        );
+    }
+}
+
 // These are owned/created in src/main.cpp.
 // We reference them here so autonomous can run mechanism actions.
 extern SbotIntake* sbot_intake;
@@ -216,6 +251,62 @@ struct SbotPoint {
     double x;
     double y;
 };
+
+// Variant: only apply the "stall" early-exit when we are already near the target.
+// This prevents cancelling mid-field motions due to transient odom dropouts/slip.
+static void sbot_wait_until_done_or_stalled_near_target_timed(
+    const char* label,
+    uint32_t overall_timeout_ms,
+    uint32_t stall_window_ms,
+    double stall_epsilon_in,
+    const SbotPoint& target,
+    double stall_only_within_in
+) {
+    if (!sbot_chassis) return;
+
+    const uint32_t start = pros::millis();
+    uint32_t last_moved_ms = start;
+    auto last_moved_pose = sbot_chassis->getPose();
+    bool has_moved = false;
+
+    bool stalled = false;
+    while (sbot_chassis->isInMotion() && (pros::millis() - start < overall_timeout_ms)) {
+        pros::delay(10);
+        const uint32_t now = pros::millis();
+
+        const auto pose = sbot_chassis->getPose();
+        const double dx = pose.x - last_moved_pose.x;
+        const double dy = pose.y - last_moved_pose.y;
+        const double dist = std::sqrt(dx * dx + dy * dy);
+
+        if (dist >= stall_epsilon_in) {
+            has_moved = true;
+            last_moved_pose = pose;
+            last_moved_ms = now;
+        }
+
+        const double err_x = target.x - pose.x;
+        const double err_y = target.y - pose.y;
+        const double dist_to_target = std::sqrt(err_x * err_x + err_y * err_y);
+
+        // Only consider "stalled" when we're close enough that contact/slip is expected.
+        if (has_moved && dist_to_target <= stall_only_within_in && (now - last_moved_ms >= stall_window_ms)) {
+            stalled = true;
+            sbot_chassis->cancelAllMotions();
+            break;
+        }
+    }
+
+    const uint32_t dur = pros::millis() - start;
+    if (SBOT_PRINT_WAIT_TIMES) {
+        printf(
+            "SBOT WAIT [%s]: %u ms%s\n",
+            label,
+            dur,
+            stalled ? " (stalled early-exit)" : ""
+        );
+    }
+}
 
 static double sbot_dist_in(const SbotPoint& a, const SbotPoint& b) {
     const double dx = a.x - b.x;
@@ -847,7 +938,7 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
             params.forwards = forwards;
             params.maxSpeed = SBOT_MATCH_MAX_SPEED;
             sbot_chassis->moveToPoint(target.x, target.y, t.drive_timeout_ms, params);
-            sbot_wait_until_done_timed("match.drive_to");
+            sbot_wait_until_done_or_timed_out_timed("match.drive_to", t.drive_timeout_ms);
         };
 
         auto drive_to_speed = [&](const SbotPoint& p, bool forwards, int maxSpeed, const char* label) {
@@ -857,7 +948,7 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
             params.forwards = forwards;
             params.maxSpeed = maxSpeed;
             sbot_chassis->moveToPoint(target.x, target.y, t.drive_timeout_ms, params);
-            sbot_wait_until_done_timed(label);
+            sbot_wait_until_done_or_timed_out_timed(label, t.drive_timeout_ms);
         };
 
         auto turn_to = [&](double heading_deg) {
@@ -900,9 +991,40 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
         // Stage 1: collect nearby block cluster FIRST.
         printf("AWP STAGE 1: cluster collect\n");
         sbot_intake_on_storage();
-        // Slow down the cluster run so balls don't fly out.
-        drive_to_speed(t.cluster1, true, 55, "match.drive_to.cluster1");
-        drive_to_speed(t.cluster1_sweep, true, 50, "match.drive_to.cluster1_sweep");
+        // Deploy matchloader after reaching the cluster approach so the preload doesn't block
+        // pushing balls out of the cluster.
+        // Also slow down the cluster run so balls don't fly out.
+        if (!sbot_chassis) return;
+
+        const uint32_t cluster_start_ms = pros::millis();
+        bool loader_deployed = false;
+        const uint32_t LOADER_DEPLOY_DELAY_MS = 700;
+
+        const SbotPoint target1 = sbot_apply_alliance_transform_only(t.cluster1, alliance_);
+        const double cluster1_heading_deg = 0.0;
+        const double target_heading = sbot_apply_alliance_transform_heading_only(cluster1_heading_deg, alliance_);
+
+        lemlib::MoveToPoseParams params1;
+        params1.forwards = true;
+        params1.maxSpeed = 55;
+        params1.minSpeed = 50;
+        params1.earlyExitRange = 2.0;
+        params1.lead = 0.3;
+        sbot_chassis->moveToPose(target1.x, target1.y, target_heading, t.drive_timeout_ms, params1);
+
+        while (sbot_chassis->isInMotion()) {
+            if (!loader_deployed && (pros::millis() - cluster_start_ms >= LOADER_DEPLOY_DELAY_MS)) {
+                printf("AWP STAGE 1b: deploy matchloader (mid-movement)\n");
+                if (sbot_batch_loader) sbot_batch_loader->extend();
+                loader_deployed = true;
+            }
+            if (sbot_intake) sbot_intake->update();
+            if (sbot_indexer) sbot_indexer->update();
+            pros::delay(10);
+        }
+
+        // Continue to cluster1_sweep (full distance remains unchanged)
+        drive_to_speed(t.cluster1_sweep, true, 40, "match.drive_to.cluster1_sweep");
         sbot_run_for_ms(t.cluster_collect_ms);
         sbot_print_pose("after cluster");
 
@@ -910,40 +1032,38 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
         if (low_goal_case) {
             printf("AWP STAGE 2: CENTER LOWER (front score)\n");
             turn_to(t.low_goal_heading_deg);
+            // Bring matchloader UP immediately after turning to the center goal so it doesn't interfere.
+            if (sbot_batch_loader) sbot_batch_loader->retract();
             sbot_intake_on_storage();
             // Drive to the computed goal pose target (absolute x/y). This is more robust than
             // projecting onto the heading line (which can clamp to 0" and result in no forward motion).
             if (sbot_chassis) {
                 const double goal_heading = sbot_apply_alliance_transform_heading_only(t.low_goal_heading_deg, alliance_);
-                SbotPoint target = sbot_apply_alliance_transform_only(t.low_goal_approach, alliance_);
+                SbotPoint target_canonical = t.low_goal_approach;
+                SbotPoint target = sbot_apply_alliance_transform_only(target_canonical, alliance_);
                 if (t.use_low_goal_contact) {
                     const SbotPoint contact = sbot_apply_alliance_transform_only(t.low_goal_contact, alliance_);
-                    target = sbot_pose_from_front_contact(contact, goal_heading, SBOT_FRONT_BUMPER_IN);
+                    const double front_effective = SBOT_FRONT_BUMPER_IN;
+                    const double goal_heading_canonical = sbot_norm_heading(t.low_goal_heading_deg);
+                    target_canonical = sbot_pose_from_front_contact(t.low_goal_contact, goal_heading_canonical, front_effective);
+                    target = sbot_apply_alliance_transform_only(target_canonical, alliance_);
                     printf(
                         "CENTER LOWER contact->pose: contact(%.2f,%.2f) heading=%.1f front=%.2f => pose(%.2f,%.2f)\n",
                         contact.x,
                         contact.y,
                         goal_heading,
-                        SBOT_FRONT_BUMPER_IN,
+                        front_effective,
                         target.x,
                         target.y
                     );
                 }
-
-                // Enforce ending square to the goal; otherwise the final push-in can go sideways.
-                lemlib::MoveToPoseParams goalParams;
-                goalParams.forwards = true;
-                goalParams.maxSpeed = 110;
-                goalParams.minSpeed = 12;
-                goalParams.earlyExitRange = 0;
-                goalParams.lead = 0.35;
 
                 {
                     const auto pose0 = sbot_chassis->getPose();
                     const double dx = target.x - pose0.x;
                     const double dy = target.y - pose0.y;
                     printf(
-                        "LOW GOAL moveToPose: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
+                        "LOW GOAL drive_to: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
                         pose0.x,
                         pose0.y,
                         pose0.theta,
@@ -954,29 +1074,31 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                         dy
                     );
                 }
-                sbot_chassis->moveToPose(target.x, target.y, goal_heading, 2500, goalParams);
-                sbot_wait_until_done_timed("match.approach_low_goal");
+                // Use moveToPoint (via drive_to_speed) like other stages.
+                // We explicitly square up again before scoring.
+                drive_to_speed(target_canonical, true, 95, "match.drive_to.low_goal");
 
                 {
                     const auto pose1 = sbot_chassis->getPose();
-                    const double dx = target.x - pose1.x;
-                    const double dy = target.y - pose1.y;
+                    const double dx1 = target.x - pose1.x;
+                    const double dy1 = target.y - pose1.y;
+                    const double dist1 = std::sqrt(dx1 * dx1 + dy1 * dy1);
                     printf(
-                        "LOW GOAL after moveToPose: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f)\n",
+                        "LOW GOAL after moveToPoint: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f) dist=%.2f\n",
                         pose1.x,
                         pose1.y,
                         pose1.theta,
-                        dx,
-                        dy
+                        dx1,
+                        dy1,
+                        dist1
                     );
                 }
             } else {
                 drive_to(t.low_goal_approach, true /* forwards */);
             }
 
-            // If we're still short, push in a bit more before scoring.
+            // Square up before scoring.
             turn_to(t.low_goal_heading_deg);
-            sbot_drive_relative(4.0, 800, true /* forwards */);
             // Ensure we spend at least 1s actively scoring.
             sbot_score_low_for(std::max<uint32_t>(t.low_goal_score_ms, 1000));
             // Reasonable wait to let the last ball clear.
@@ -985,14 +1107,19 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
         } else {
             printf("AWP STAGE 2: CENTER MIDDLE (back score)\n");
             turn_to(t.mid_goal_heading_deg);
+            // Bring matchloader UP immediately after turning to the center goal so it doesn't interfere.
+            if (sbot_batch_loader) sbot_batch_loader->retract();
             sbot_intake_on_storage();
             // Confirmed: we want REAR facing the goal, so we back into the scoring spot.
             {
                 const double goal_heading = sbot_apply_alliance_transform_heading_only(t.mid_goal_heading_deg, alliance_);
-                SbotPoint mid_target = sbot_apply_alliance_transform_only(t.mid_goal_approach, alliance_);
+                SbotPoint mid_target_canonical = t.mid_goal_approach;
+                SbotPoint mid_target = sbot_apply_alliance_transform_only(mid_target_canonical, alliance_);
                 if (t.use_mid_goal_contact) {
                     const SbotPoint contact = sbot_apply_alliance_transform_only(t.mid_goal_contact, alliance_);
-                    mid_target = sbot_pose_from_back_contact(contact, goal_heading, SBOT_BACK_BUMPER_IN);
+                    const double goal_heading_canonical = sbot_norm_heading(t.mid_goal_heading_deg);
+                    mid_target_canonical = sbot_pose_from_back_contact(t.mid_goal_contact, goal_heading_canonical, SBOT_BACK_BUMPER_IN);
+                    mid_target = sbot_apply_alliance_transform_only(mid_target_canonical, alliance_);
                     printf(
                         "CENTER MIDDLE contact->pose: contact(%.2f,%.2f) heading=%.1f back=%.2f => pose(%.2f,%.2f)\n",
                         contact.x,
@@ -1004,50 +1131,40 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                     );
                 }
 
-                // IMPORTANT: mid-goal has been approaching at an angle.
-                // Use pose pursuit so we converge x/y AND end square to the goal.
-                if (sbot_chassis) {
-                    lemlib::MoveToPoseParams poseParams;
-                    poseParams.forwards = false; // back into the goal
-                    poseParams.maxSpeed = 110;
-                    poseParams.minSpeed = 12;
-                    poseParams.earlyExitRange = 0;
-                    poseParams.lead = 0.35;
+                // Use moveToPoint (via drive_to_speed) like other stages.
+                // We are already turned to t.mid_goal_heading_deg, so driving backwards preserves the desired rear-in approach.
+                {
+                    const auto pose0 = sbot_chassis->getPose();
+                    const double dx = mid_target.x - pose0.x;
+                    const double dy = mid_target.y - pose0.y;
+                    printf(
+                        "MID GOAL moveToPoint: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
+                        pose0.x,
+                        pose0.y,
+                        pose0.theta,
+                        mid_target.x,
+                        mid_target.y,
+                        goal_heading,
+                        dx,
+                        dy
+                    );
+                }
+                drive_to_speed(mid_target_canonical, false /* backwards */, 95, "match.drive_to.mid_goal");
 
-                    {
-                        const auto pose0 = sbot_chassis->getPose();
-                        const double dx = mid_target.x - pose0.x;
-                        const double dy = mid_target.y - pose0.y;
-                        printf(
-                            "MID GOAL moveToPose: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
-                            pose0.x,
-                            pose0.y,
-                            pose0.theta,
-                            mid_target.x,
-                            mid_target.y,
-                            goal_heading,
-                            dx,
-                            dy
-                        );
-                    }
-                    sbot_chassis->moveToPose(mid_target.x, mid_target.y, goal_heading, t.drive_timeout_ms, poseParams);
-                    sbot_wait_until_done_timed("match.approach_mid_goal_pose");
-
-                    {
-                        const auto pose1 = sbot_chassis->getPose();
-                        const double dx = mid_target.x - pose1.x;
-                        const double dy = mid_target.y - pose1.y;
-                        printf(
-                            "MID GOAL after moveToPose: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f)\n",
-                            pose1.x,
-                            pose1.y,
-                            pose1.theta,
-                            dx,
-                            dy
-                        );
-                    }
-                } else {
-                    drive_to(mid_target, false /* backwards */);
+                {
+                    const auto pose1 = sbot_chassis->getPose();
+                    const double dx = mid_target.x - pose1.x;
+                    const double dy = mid_target.y - pose1.y;
+                    const double dist = std::sqrt(dx * dx + dy * dy);
+                    printf(
+                        "MID GOAL after moveToPoint: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f) dist=%.2f\n",
+                        pose1.x,
+                        pose1.y,
+                        pose1.theta,
+                        dx,
+                        dy,
+                        dist
+                    );
                 }
             }
             // Ensure we spend at least 1s actively scoring.
@@ -1128,7 +1245,7 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                     xParams.minSpeed = 0;
                     xParams.earlyExitRange = 0;
                     sbot_chassis->moveToPoint(line_x, pose0.y, 1600, xParams);
-                    sbot_wait_until_done_timed("match.align_line_x");
+                    sbot_wait_until_done_or_timed_out_timed("match.align_line_x", 1600);
                 }
 
                 const double tube_heading = sbot_apply_alliance_transform_heading_only(t.tube_face_heading_deg, alliance_);
@@ -1172,41 +1289,50 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
                         sbot_wait_until_done_timed("match.turn_to.tube_correct");
                     }
                 }
-                // Enforce ending square to the loader: use pose pursuit (fixes wrong-angle tube contact).
+                // Use moveToPoint for tube approach (consistent with the rest of match auton).
+                // We already turned to face the tube; do a quick re-square after the move.
                 {
-                    lemlib::MoveToPoseParams poseParams;
-                    poseParams.forwards = true;
-                    poseParams.maxSpeed = 110;
-                    poseParams.minSpeed = 12;
-                    poseParams.earlyExitRange = 0;
-                    poseParams.lead = 0.35;
-
-                    {
-                        const auto pose0 = sbot_chassis->getPose();
-                        const double dx = tube_pose_target.x - pose0.x;
-                        const double dy = tube_pose_target.y - pose0.y;
-                        printf(
-                            "TUBE moveToPose: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
-                            pose0.x,
-                            pose0.y,
-                            pose0.theta,
-                            tube_pose_target.x,
-                            tube_pose_target.y,
-                            tube_heading,
-                            dx,
-                            dy
-                        );
-                    }
-                    sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, 2600, poseParams);
+                    const auto pose0 = sbot_chassis->getPose();
+                    const double dx = tube_pose_target.x - pose0.x;
+                    const double dy = tube_pose_target.y - pose0.y;
+                    printf(
+                        "TUBE moveToPoint: from(%.2f,%.2f,%.1f) to(%.2f,%.2f,%.1f) d=(%.2f,%.2f)\n",
+                        pose0.x,
+                        pose0.y,
+                        pose0.theta,
+                        tube_pose_target.x,
+                        tube_pose_target.y,
+                        tube_heading,
+                        dx,
+                        dy
+                    );
                 }
-                sbot_wait_until_done_timed("match.approach_tube_pose");
+                {
+                    lemlib::MoveToPointParams p;
+                    p.forwards = true;
+                    p.maxSpeed = 75;
+                    p.minSpeed = 0;
+                    p.earlyExitRange = 0;
+                    const uint32_t tube_timeout_ms = 3200;
+                    sbot_chassis->moveToPoint(tube_pose_target.x, tube_pose_target.y, tube_timeout_ms, p);
+                    sbot_wait_until_done_or_timed_out_timed("match.approach_tube_point", tube_timeout_ms);
+                }
+
+                // Final quick square-up before pulling.
+                {
+                    lemlib::TurnToHeadingParams final;
+                    final.maxSpeed = 55;
+                    final.minSpeed = 10;
+                    sbot_chassis->turnToHeading(tube_heading, 450, final);
+                    sbot_wait_until_done_timed("match.turn_to.tube_final");
+                }
 
                 {
                     const auto pose1 = sbot_chassis->getPose();
                     const double dx = tube_pose_target.x - pose1.x;
                     const double dy = tube_pose_target.y - pose1.y;
                     printf(
-                        "TUBE after moveToPose: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f)\n",
+                        "TUBE after moveToPoint: at(%.2f,%.2f,%.1f) err=(%.2f,%.2f)\n",
                         pose1.x,
                         pose1.y,
                         pose1.theta,
@@ -1222,16 +1348,7 @@ static void sbot_run_match_auto(SbotAutoSide side, SbotAutoAlliance alliance, bo
             pros::delay(60);
 
             // Pull off the loader so we can back into the long goal cleanly.
-            if (sbot_chassis) {
-                const SbotPoint pulloff = sbot_apply_alliance_transform_only(t.tube1_pulloff, alliance_);
-                const double tube_heading = sbot_apply_alliance_transform_heading_only(t.tube_face_heading_deg, alliance_);
-
-                // Back out using a short, robust relative move.
-                // The pulloff point is roughly 2-3" away; using odom-point pursuit here can time out.
-                (void)tube_heading;
-                (void)pulloff;
-                sbot_drive_relative(3.0, 900, false /* backwards */);
-            }
+            // No extra pulloff drive: rely on the next motion to clear cleanly.
             sbot_print_pose("after loader1 (relative)");
         } else {
             // Other starts: keep the existing absolute-point approach for now.
