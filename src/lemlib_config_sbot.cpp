@@ -4,6 +4,8 @@
 
 #include "lemlib_config_sbot.h"
 
+#include "lemlib/logger/logger.hpp"
+
 #include <cmath>
 
 // Motor groups
@@ -35,6 +37,11 @@ void initializeSbotLemLib() {
     }
 
     printf("Initializing LemLib for sbot...\n");
+    printf("SBOT BUILD TAG: %s %s\n", __DATE__, __TIME__);
+
+    // Keep LemLib logs quiet by default; we selectively enable DEBUG around
+    // specific motions (e.g., moveToPose) from autonomous code when needed.
+    lemlib::infoSink()->setLowestLevel(lemlib::Level::WARN);
 
     // ----------------------- Motors & Drivetrain -----------------------
 
@@ -84,9 +91,9 @@ void initializeSbotLemLib() {
     // -------------------------- Controllers --------------------------
 
     sbot_linear_controller = new lemlib::ControllerSettings(
-        10,   // kP
+        18,   // kP
         0,    // kI
-        30,   // kD
+        100,   // kD
         0,    // windup
         0.5,  // small error (in)
         150,  // small error timeout (ms)
@@ -96,9 +103,9 @@ void initializeSbotLemLib() {
     );
 
     sbot_angular_controller = new lemlib::ControllerSettings(
-        2.0,  // kP
+        3.0,  // kP
         0.0,  // kI
-        10.0, // kD
+        22.0, // kD
         0,    // windup
         1.0,  // small error (deg)
         150,  // small error timeout (ms)
