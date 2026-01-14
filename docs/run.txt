@@ -1,7 +1,7 @@
 === SBOT INITIALIZE START ===
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
 Initializing LemLib for sbot...
-SBOT BUILD TAG: Jan 12 2026 22:50:04
+SBOT BUILD TAG: Jan 13 2026 21:31:59
 Calibrating sbot chassis (IMU/odometry)...
 Sbot LemLib initialization complete.
 SBOT: subsystems created; defaults applied
@@ -14,91 +14,77 @@ SBOT AUTO: READY 1 (Red Left)
 SBOT: auto mode confirmed
 SBOT: DEV MODE running selected autonomous mode: 1
 SBOT AUTON: AWP HALF (RED LEFT)
-SBOT BUILD TAG: Jan 12 2026 22:49:59
+SBOT BUILD TAG: Jan 13 2026 22:08:02
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
 SBOT POSE [awp start]: x=0.00 y=-0.00 th=-0.05
--46.500,15.000,120
+-48.000,16.000,120
 AWP STAGE 1: cluster collect
-WARNING - pros.serial.devices.vex.v5_user_device:read - Could not decode bytes: 322e343220706f7365282d312e34322c322e36352c2d33322e32292064506f73653d322e373720766572742e696e3d332e30352064566572743d322e373920696d752e683d3332372e3620696d752e723d2d33322e340a - pros-cli version:3.5.6
-SBOT WAIT TRACE [match.cluster.reach] t=600ms dist=15.70 hErr=27.20 pose(-4.37,7.50,-27.7) dPose=5.68 vert.in=8.72 dVert=5.68 imu.h=332.8 imu.r=-27.2
-SBOT WAIT TRACE [match.cluster.reach] t=800ms dist=10.08 hErr=21.32 pose(-6.66,12.70,-21.6) dPose=5.68 vert.in=14.40 dVert=5.68 imu.h=338.7 imu.r=-21.3
-SBOT WAIT TRACE [match.cluster.reach] t=1000ms dist=4.78 hErr=8.90 pose(-8.33,17.77,-10.3) dPose=5.34 vert.in=19.73 dVert=5.33 imu.h=351.1 imu.r=-8.9
-SBOT WAIT TRACE [match.cluster.reach] t=1200ms dist=1.62 hErr=2.24 pose(-8.43,20.99,2.2) dPose=3.22 vert.in=22.95 dVert=3.22 imu.h=2.2 imu.r=2.2
-SBOT WAIT [match.cluster.reach]: 1330 ms (close) endDist=0.99 endHErr=1.02 inMotion=0
+WARNING - pros.serial.devices.vex.v5_user_device:read - Could not decode bytes: 382e313120706f7365282d312e35372c332e37302c2d32382e31292064506f73653d332e343320766572742e696e3d342e36322064566572743d332e383420696d752e683d3333312e3920696d752e723d2d32382e310a - pros-cli version:3.5.6
+SBOT WAIT TRACE [match.cluster.reach] t=600ms dist=15.50 hErr=22.35 pose(-4.21,8.97,-22.9) dPose=5.90 vert.in=10.56 dVert=5.94 imu.h=337.6 imu.r=-22.4
+SBOT WAIT TRACE [match.cluster.reach] t=800ms dist=9.34 hErr=17.33 pose(-6.27,14.82,-17.5) dPose=6.20 vert.in=16.88 dVert=6.32 imu.h=342.7 imu.r=-17.3
+SBOT WAIT TRACE [match.cluster.reach] t=1000ms dist=3.88 hErr=1.83 pose(-7.59,20.14,-2.8) dPose=5.49 vert.in=21.98 dVert=5.10 imu.h=358.2 imu.r=-1.8
+SBOT WAIT [match.cluster.reach]: 1180 ms (close) endDist=1.38 endHErr=1.52 inMotion=0
 SBOT PNEU: batch loader EXTEND (ADI C -> 1)
-SBOT POSE [after cluster]: x=-8.40 y=21.77 th=1.02
--24.730,23.401,120
+SBOT POSE [after cluster]: x=-7.54 y=23.11 th=0.43
+-24.890,23.542,120
 AWP STAGE 2: CENTER LOWER (front score)
-SBOT WAIT [match.turn_to]: 580 ms
+SBOT WAIT [match.turn_to]: 610 ms
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-CENTER LOWER contact->pose: contact(9.00,40.50) heading=45.0 front=7.50 => pose(3.70,35.20)
-LOW GOAL drive_to: from(-8.32,21.91,43.8) to(3.70,35.20,45.0) d=(12.02,13.28)
-SBOT TARGET JERRY [low_goal_pose_target]: our(3.70,35.20) => jerry(-11.303,11.303)
-SBOT WAIT TRACE [match.approach_low_goal_pose] t=200ms dist=15.63 hErr=3.85 pose(-6.79,23.61,41.2) dPose=2.28 vert.in=26.14 dVert=2.29 imu.h=41.2 imu.r=41.2
-SBOT WAIT TRACE [match.approach_low_goal_pose] t=400ms dist=8.91 hErr=4.73 pose(-2.46,28.75,40.0) dPose=6.72 vert.in=32.87 dVert=6.73 imu.h=40.3 imu.r=40.3
-SBOT WAIT TRACE [match.approach_low_goal_pose] t=600ms dist=2.98 hErr=1.58 pose(1.60,33.07,46.4) dPose=5.93 vert.in=38.80 dVert=5.92 imu.h=46.6 imu.r=46.6
-SBOT WAIT [match.approach_low_goal_pose]: 750 ms (close) endDist=0.39 endHErr=0.57 inMotion=0
-LOW GOAL after moveToPose: at(3.80,35.19,45.5) err=(-0.10,0.01) dist=0.10
-LOW GOAL contact check: expected(9.00,40.50) est(9.15,40.45) d=(-0.15,0.05) dist=0.16 heading=45.5
-SBOT POSE [after center lower (front)]: x=3.75 y=35.15 th=45.40
--11.352,11.248,120
+CENTER LOWER contact->pose: contact(10.00,42.00) heading=45.0 front=7.50 => pose(4.70,36.70)
+LOW GOAL drive_to: from(-7.41,23.26,43.8) to(4.70,36.70,45.0) d=(12.10,13.44)
+SBOT TARGET JERRY [low_goal_pose_target]: our(4.70,36.70) => jerry(-11.303,11.303)
+SBOT WAIT TRACE [match.approach_low_goal_pose] t=200ms dist=16.02 hErr=3.96 pose(-6.02,24.79,41.1) dPose=2.06 vert.in=27.39 dVert=2.63 imu.h=41.0 imu.r=41.0
+SBOT WAIT TRACE [match.approach_low_goal_pose] t=400ms dist=8.94 hErr=4.65 pose(-1.44,30.19,40.2) dPose=7.08 vert.in=34.67 dVert=7.28 imu.h=40.3 imu.r=40.3
+SBOT WAIT TRACE [match.approach_low_goal_pose] t=600ms dist=2.59 hErr=1.82 pose(2.89,34.84,46.7) dPose=6.35 vert.in=40.26 dVert=5.60 imu.h=46.8 imu.r=46.8
+SBOT WAIT [match.approach_low_goal_pose]: 670 ms (close) endDist=1.21 endHErr=1.18 inMotion=0
+LOW GOAL after moveToPose: at(4.36,36.24,42.2) err=(0.33,0.46) dist=0.57
+LOW GOAL contact check: expected(10.00,42.00) est(9.41,41.79) d=(0.59,0.21) dist=0.63 heading=42.3
+SBOT POSE [after center lower (front)]: x=4.36 y=36.24 th=42.35
+-11.762,11.640,120
 AWP STAGE 3: retreat + face loader
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-RETREAT target: (-33.00, -1.50)
-SBOT WAIT TRACE [match.retreat] t=200ms dist=49.20 hErr=0.40 pose(1.84,33.24,45.1) dPose=2.70 vert.in=38.46 dVert=-3.32 imu.h=45.0 imu.r=45.0
-SBOT WAIT TRACE [match.retreat] t=400ms dist=40.64 hErr=0.27 pose(-4.21,27.18,45.7) dPose=8.56 vert.in=29.39 dVert=-9.07 imu.h=45.7 imu.r=45.7
-SBOT WAIT TRACE [match.retreat] t=600ms dist=28.54 hErr=0.12 pose(-12.80,18.66,45.2) dPose=12.10 vert.in=17.07 dVert=-12.32 imu.h=45.3 imu.r=45.3
-SBOT WAIT TRACE [match.retreat] t=800ms dist=14.08 hErr=0.08 pose(-23.09,8.50,45.5) dPose=14.46 vert.in=2.51 dVert=-14.55 imu.h=45.5 imu.r=45.5
-SBOT WAIT TRACE [match.retreat] t=1000ms dist=2.24 hErr=2.63 pose(-31.42,0.08,42.9) dPose=11.84 vert.in=-8.51 dVert=-11.02 imu.h=42.8 imu.r=42.8
-SBOT WAIT [match.retreat]: 1040 ms (close) endDist=1.00 endHErr=3.18 inMotion=0
-SBOT POSE [after retreat (pre-turn)]: x=-32.25 y=-0.83 th=42.29
--47.327,47.255,120
-SBOT POSE JERRY [after retreat (pre-turn)]: our(-32.25,-0.83,42.29) => jerry(-47.327,47.255)
-FACE LOADER turn_to: canonical=180.0 transformed=180.0 startPose.th=42.29 imu=42.27
-SBOT WAIT [match.turn_to]: 790 ms
-FACE LOADER after turn: pose.th=180.53 imu=180.62 errPose=-0.53 errImu=-0.62
+RETREAT target: (-32.00, 0.00)
+SBOT WAIT TRACE [match.retreat] t=200ms dist=49.08 hErr=3.51 pose(2.77,34.64,45.8) dPose=2.26 vert.in=40.04 dVert=-2.26 imu.h=45.9 imu.r=45.9
+SBOT WAIT TRACE [match.retreat] t=400ms dist=41.73 hErr=3.60 pose(-2.53,29.54,45.9) dPose=7.35 vert.in=32.69 dVert=-7.35 imu.h=46.0 imu.r=46.0
+SBOT WAIT TRACE [match.retreat] t=600ms dist=30.73 hErr=4.04 pose(-10.47,21.92,46.4) dPose=11.01 vert.in=21.68 dVert=-11.01 imu.h=46.4 imu.r=46.4
+SBOT WAIT TRACE [match.retreat] t=800ms dist=18.23 hErr=2.96 pose(-19.49,13.26,45.5) dPose=12.50 vert.in=9.18 dVert=-12.50 imu.h=45.4 imu.r=45.4
+SBOT WAIT TRACE [match.retreat] t=1000ms dist=6.97 hErr=0.74 pose(-27.22,5.07,41.7) dPose=11.26 vert.in=-2.08 dVert=-11.26 imu.h=41.7 imu.r=41.7
+SBOT WAIT [match.retreat]: 1170 ms (close) endDist=0.89 endHErr=1.51 inMotion=0
+SBOT POSE [after retreat (pre-turn)]: x=-31.27 y=0.51 th=40.91
+-47.493,47.267,120
+SBOT POSE JERRY [after retreat (pre-turn)]: our(-31.27,0.51,40.91) => jerry(-47.493,47.267)
+FACE LOADER turn_to: canonical=180.0 transformed=180.0 startPose.th=40.91 imu=40.89
+SBOT WAIT [match.turn_to]: 830 ms
+FACE LOADER after turn: pose.th=180.88 imu=180.93 errPose=-0.88 errImu=-0.93
 SBOT PNEU: batch loader EXTEND (ADI C -> 1)
-SBOT POSE [after retreat/turn]: x=-33.76 y=-2.30 th=180.70
--48.797,48.755,120
-SBOT SENSORS [after retreat/turn]: imu.heading=180.75 imu.rotation=180.75 vertRot.pos=-61075.00 vert.in=-11.33
+SBOT POSE [after retreat/turn]: x=-32.54 y=-0.48 th=180.89
+-48.481,48.540,120
+SBOT SENSORS [after retreat/turn]: imu.heading=180.96 imu.rotation=180.96 vertRot.pos=-55793.00 vert.in=-10.35
 AWP STAGE 4: loader1 pull
 SBOT WAIT [match.align_line_x]: 160 ms
-TUBE contact->pose: contact(-33.00,-24.50) heading=180.0 frontEff=13.50 => pose(-33.00,-11.00)
-TUBE moveToPose: from(-33.76,-2.30,180.7) to(-33.00,-11.00,180.0) d=(0.76,-8.70)
-SBOT TARGET JERRY [tube_pose_target]: our(-33.00,-11.00) => jerry(-57.500,48.000)
-SBOT WAIT TRACE [match.approach_tube_pose] t=200ms dist=8.11 hErr=4.60 pose(-33.73,-2.92,175.7) dPose=0.62 vert.in=-10.54 dVert=0.79 imu.h=175.4 imu.r=175.4
-SBOT WAIT TRACE [match.approach_tube_pose] t=400ms dist=5.43 hErr=3.51 pose(-33.47,-5.59,176.0) dPose=2.69 vert.in=-7.61 dVert=2.93 imu.h=176.5 imu.r=176.5
-SBOT WAIT TRACE [match.approach_tube_pose] t=600ms dist=3.34 hErr=5.94 pose(-33.37,-7.68,173.9) dPose=2.09 vert.in=-5.92 dVert=1.69 imu.h=174.1 imu.r=174.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=800ms dist=1.73 hErr=2.91 pose(-33.28,-9.30,177.1) dPose=1.62 vert.in=-4.23 dVert=1.69 imu.h=177.1 imu.r=177.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=1000ms dist=1.43 hErr=1.98 pose(-33.26,-9.59,177.9) dPose=0.29 vert.in=-4.01 dVert=0.22 imu.h=178.0 imu.r=178.0
-SBOT WAIT TRACE [match.approach_tube_pose] t=1200ms dist=1.43 hErr=1.95 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=1400ms dist=1.43 hErr=1.95 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=1600ms dist=1.43 hErr=1.91 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=1800ms dist=1.43 hErr=1.94 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=2000ms dist=1.43 hErr=1.92 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=2200ms dist=1.43 hErr=1.92 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=2400ms dist=1.43 hErr=1.94 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=2600ms dist=1.43 hErr=1.94 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=2800ms dist=1.43 hErr=1.93 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=3000ms dist=1.43 hErr=1.95 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT TRACE [match.approach_tube_pose] t=3200ms dist=1.43 hErr=1.94 pose(-33.26,-9.59,178.0) dPose=0.00 vert.in=-4.01 dVert=0.00 imu.h=178.1 imu.r=178.1
-SBOT WAIT [match.approach_tube_pose]: 3200 ms (timed out) endDist=1.43 endHErr=1.93 inMotion=0
-TUBE after moveToPose: at(-33.26,-9.59,178.0) err=(0.26,-1.41)
+TUBE contact->pose: contact(-32.00,-23.00) heading=180.0 frontEff=13.50 => pose(-32.00,-9.50)
+TUBE moveToPose: from(-32.54,-0.50,181.0) to(-32.00,-9.50,180.0) d=(0.54,-9.00)
+SBOT TARGET JERRY [tube_pose_target]: our(-32.00,-9.50) => jerry(-57.500,48.000)
+SBOT WAIT TRACE [match.approach_tube_pose] t=200ms dist=8.22 hErr=2.94 pose(-32.52,-1.30,177.2) dPose=0.80 vert.in=-9.35 dVert=1.00 imu.h=177.1 imu.r=177.1
+SBOT WAIT TRACE [match.approach_tube_pose] t=400ms dist=5.12 hErr=2.01 pose(-32.33,-4.39,177.7) dPose=3.10 vert.in=-5.92 dVert=3.42 imu.h=178.0 imu.r=178.0
+SBOT WAIT [match.approach_tube_pose]: 600 ms (close) endDist=0.98 endHErr=0.03 inMotion=0
+TUBE after moveToPose: at(-32.25,-8.56,179.8) err=(0.25,-0.94)
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT POSE [after loader1 (relative)]: x=-33.26 y=-9.59 th=177.93
--56.094,48.261,120
+SBOT POSE [after loader1 (relative)]: x=-32.25 y=-8.92 th=180.15
+-56.922,48.247,120
 AWP STAGE 5: second score
 AWP STAGE 5: LONG GOAL END (near loader)
-SBOT WAIT [drive_relative_stall_exit]: 920 ms
+SBOT WAIT [drive_relative_stall_exit]: 930 ms
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT POSE [after high goal]: x=-34.23 y=17.50 th=173.47
--29.003,49.233,120
+SBOT POSE [after high goal]: x=-32.17 y=18.02 th=174.29
+-29.975,48.170,120
 AWP STAGE 6: end safe
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT POSE [end safe (no move)]: x=-34.23 y=17.50 th=173.47
--29.003,49.233,120
+SBOT POSE [end safe (no move)]: x=-32.17 y=18.02 th=174.29
+-29.975,48.170,120
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
 SBOT AUTON: AWP HALF complete
+SBOT AUTON TOTAL: 11380 ms
 SBOT: DEV MODE autonomous complete; entering opcontrol
 === SBOT INITIALIZE COMPLETE ===
 === SBOT OPCONTROL() ENTER ===

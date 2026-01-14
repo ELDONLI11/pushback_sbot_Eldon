@@ -26,16 +26,13 @@ static constexpr double SBOT_BACK_BUMPER_IN = 7.5;
 // Jerry coords are absolute field inches. Our internal coords are start-relative:
 // - +Y is into-field from the robot start, +X is robot-right at start
 // - our 0° faces +Y
-// IMPORTANT: We define the Jerry "start" as the LemLib pose point (drivetrain rotation center),
-// not the IMU/gyro location.
-// Your original Jerry start was given at the gyro: (-51, 15).
-// Gyro is 4.5" behind the pose point, along +Y at match start.
-// Therefore, pose-based Jerry start is: (-51 + 4.5, 15) = (-46.5, 15).
+// IMPORTANT: We define the Jerry "start" as the LemLib pose point (drivetrain rotation center).
+// Set the values below to whatever absolute Jerry coordinate you are using as match start.
 
 // Canonical Jerry starts (pose-point reference).
 // Red Right is mirrored across the Jerry X axis (Jerry Y is multiplied by -1).
-static constexpr double SBOT_JERRY_START_RL_X = -46.5;
-static constexpr double SBOT_JERRY_START_RL_Y = 15.0;
+static constexpr double SBOT_JERRY_START_RL_X = -48.0;
+static constexpr double SBOT_JERRY_START_RL_Y = 16.0;
 static constexpr double SBOT_JERRY_START_RR_X = SBOT_JERRY_START_RL_X;
 static constexpr double SBOT_JERRY_START_RR_Y = -SBOT_JERRY_START_RL_Y;
 
@@ -953,8 +950,8 @@ static void sbot_run_match_auto(
         // Center Goal – Lower approach (front-score).
         t.low_goal_approach = center_lower_approach;
         t.low_goal_heading_deg = 45;
-        // Lower-goal scoring: run longer to fully clear balls.
-        t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 900;
+        // Lower-goal scoring: add extra time to ensure balls fully clear.
+        t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
         // Use a measured front-bumper contact point for the Center Goal.
         // Source of truth (Jerry field coords, inches): (-6, 6)
         t.use_low_goal_contact = true;
@@ -1004,7 +1001,7 @@ static void sbot_run_match_auto(
         // Primary behavior uses field feature contact points + offsets.
         t.tube1 = {-33, -11.0};
         t.tube1_pulloff = {-33, -8.0};
-        // Wait at the tube longer so intake has time to load.
+        // Wait at the tube long enough to load.
         t.tube_pull_ms = 2000;
 
         // Loader contact point (field feature, Jerry coords): (-71, 48).
@@ -1019,10 +1016,10 @@ static void sbot_run_match_auto(
         t.tube2 = {54, -24};
         t.tube2_pulloff = {-18, -18};
 
-        // Timeouts: keep reasonable so we don't burn match time if something is slightly off.
-        t.drive_timeout_ms = 4000;
-        // Keep turns from burning too much time if we can't fully settle.
-        t.turn_timeout_ms = 1800;
+        // Timeouts: keep tight so we don't burn match time if something is slightly off.
+        // We rely on pose-close exit thresholds to end motions quickly once we're in position.
+        t.drive_timeout_ms = 2500;
+        t.turn_timeout_ms = 1300;
 
         t.end_safe = {0, 14};
         return t;
@@ -1084,6 +1081,7 @@ static void sbot_run_match_auto(
     };
 
     auto sbot_run_awp_half_field = [&](SbotAutoSide side_, SbotAutoAlliance alliance_, bool solo_) {
+        const uint32_t auton_start_ms = pros::millis();
         printf("SBOT AUTON: %s (%s %s)\n",
                solo_ ? "SOLO AWP" : "AWP HALF",
                (alliance_ == SbotAutoAlliance::RED) ? "RED" : "BLUE",
@@ -1205,7 +1203,7 @@ static void sbot_run_match_auto(
                     t.drive_timeout_ms,
                     250,
                     {cluster_target.x, cluster_target.y},
-                    1.0,
+                    1.5,
                     cluster_heading,
                     15.0
                 );
@@ -1313,7 +1311,7 @@ static void sbot_run_match_auto(
 
                     // IMPORTANT: give LemLib a longer internal timeout than our wait loop.
                     // Otherwise LemLib can stop the motion at exactly the wait timeout while still far away.
-                    const uint32_t goal_wait_timeout_ms = 3200;
+                    const uint32_t goal_wait_timeout_ms = 1900;
                     const uint32_t goal_motion_timeout_ms = 9000;
 
                     sbot_lemlib_debug_window_begin("match.approach_low_goal_pose");
@@ -1321,9 +1319,9 @@ static void sbot_run_match_auto(
                     sbot_wait_until_pose_close_or_timeout_timed(
                         "match.approach_low_goal_pose",
                         goal_wait_timeout_ms,
-                        650,
+                        400,
                         {target.x, target.y},
-                        0.5,
+                        1.25,
                         goal_heading,
                         6.0
                     );
@@ -1346,10 +1344,10 @@ static void sbot_run_match_auto(
                             sbot_chassis->moveToPose(target.x, target.y, goal_heading, 5000, retry);
                             sbot_wait_until_pose_close_or_timeout_timed(
                                 "match.approach_low_goal_pose.retry",
-                                1800,
-                                450,
+                                1100,
+                                300,
                                 {target.x, target.y},
-                                0.5,
+                                1.25,
                                 goal_heading,
                                 6.0
                             );
@@ -1358,8 +1356,9 @@ static void sbot_run_match_auto(
                     }
                 }
 
-                // Give the intake/indexer time to finish pulling balls in before scoring.
-                sbot_run_for_ms(500);
+                // Give the intake/indexer a brief moment to finish pulling balls in before scoring.
+                // Keep this tight for match timing; increase only if balls are consistently not fully loaded.
+                sbot_run_for_ms(200);
 
                 {
                     const auto pose1 = sbot_chassis->getPose();
@@ -1510,8 +1509,8 @@ static void sbot_run_match_auto(
                     }
                 }
 
-                // Give the intake/indexer time to finish pulling balls in before scoring.
-                sbot_run_for_ms(500);
+                // Give the intake/indexer a brief moment to finish pulling balls in before scoring.
+                sbot_run_for_ms(200);
 
                 {
                     const auto pose1 = sbot_chassis->getPose();
@@ -1712,7 +1711,7 @@ static void sbot_run_match_auto(
                     );
                 }
                 {
-                    const uint32_t tube_wait_timeout_ms = 3200;
+                    const uint32_t tube_wait_timeout_ms = 1700;
                     const uint32_t tube_motion_timeout_ms = 9000;
                     lemlib::MoveToPoseParams p;
                     p.forwards = true;
@@ -1728,9 +1727,9 @@ static void sbot_run_match_auto(
                     sbot_wait_until_pose_close_or_timeout_timed(
                         "match.approach_tube_pose",
                         tube_wait_timeout_ms,
-                        650,
+                        350,
                         {tube_pose_target.x, tube_pose_target.y},
-                        0.5,
+                        1.0,
                         tube_heading,
                         8.0
                     );
@@ -1752,10 +1751,10 @@ static void sbot_run_match_auto(
                             sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, 5000, retry);
                             sbot_wait_until_pose_close_or_timeout_timed(
                                 "match.approach_tube_pose.retry",
-                                1800,
-                                450,
+                                1100,
+                                250,
                                 {tube_pose_target.x, tube_pose_target.y},
-                                0.5,
+                                1.0,
                                 tube_heading,
                                 8.0
                             );
@@ -1839,6 +1838,7 @@ static void sbot_run_match_auto(
 
         sbot_safe_stop_mechanisms();
         printf("SBOT AUTON: %s complete\n", solo_ ? "SOLO AWP" : "AWP HALF");
+        printf("SBOT AUTON TOTAL: %u ms\n", static_cast<unsigned>(pros::millis() - auton_start_ms));
     };
 
     sbot_run_awp_half_field(side, alliance, solo_awp);
