@@ -99,7 +99,8 @@ void initializeSbotLemLib() {
         150,  // small error timeout (ms)
         1.0,  // large error (in)
         300,  // large error timeout (ms)
-        0     // max acceleration
+        50    // max acceleration (units/s^2) - limits how fast speed changes
+              // Higher = faster but more tipping. 0 = unlimited. Try 30-80.
     );
 
     sbot_angular_controller = new lemlib::ControllerSettings(
@@ -111,7 +112,8 @@ void initializeSbotLemLib() {
         150,  // small error timeout (ms)
         3.0,  // large error (deg)
         250,  // large error timeout (ms)
-        0     // max acceleration
+        40    // max acceleration (deg/s^2) - limits rotation speed changes
+              // Higher = faster turns but more tipping. 0 = unlimited. Try 30-60.
     );
 
     // ---------------------------- Chassis ----------------------------

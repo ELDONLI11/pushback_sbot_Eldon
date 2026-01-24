@@ -12,6 +12,7 @@
 #include "pneumatics.h"
 #include "color_sensor_system.h"
 #include "autonomous_sbot.h"
+#include "lemlib_config_sbot.h"
 
 // Global subsystem pointers
 pros::Controller* sbot_master = nullptr;
@@ -77,6 +78,148 @@ void initialize() {
     printf("SBOT: subsystems created; defaults applied\n");
     fflush(stdout);
 
+    // ========== AUTONOMOUS SELECTOR - ALWAYS AVAILABLE ON STARTUP ==========
+    // Initialize and display selector immediately when program starts.
+    // This ensures selection is ALWAYS available, regardless of competition state.
+    if (sbot_master && sbot_master->is_connected()) {
+        printf("\nSBOT: Initializing autonomous selector...\n");
+        fflush(stdout);
+        sbot_master->clear();
+        pros::delay(50);
+        
+        // Force initial display
+        if (sbot_auton) {
+            sbot_auton->updateSelector();
+            printf("SBOT: Selector ready - use D-pad L/R + A anytime to select/change\n");
+            printf("SBOT: Current selection will be shown on controller screen\n");
+            fflush(stdout);
+        }
+    } else {
+        printf("\nSBOT: WARNING - Controller not connected, selector display unavailable\n");
+        printf("SBOT: Selector logic still active, will display when controller connects\n");
+        fflush(stdout);
+    }
+    // ========================================================================
+
+    // ========== MANUAL COMPETITION TEST MODE (NO HARDWARE NEEDED) ==========
+    // Uncomment this block to manually test selector and autonomous
+    // using controller buttons (100% reliable, no competition switch needed)
+    /*
+    printf("\n=== MANUAL COMPETITION TEST MODE ENABLED ===\n");
+    printf("Press X button on controller to start test sequence\n");
+    fflush(stdout);
+    
+    // Wait for X button to start test
+    while (!sbot_master->get_digital(pros::E_CONTROLLER_DIGITAL_X)) {
+        pros::delay(20);
+    }
+    
+    printf("\n--- SIMULATING DISABLED PHASE (30 seconds) ---\n");
+    printf("Use D-pad Left/Right + A to select autonomous\n");
+    fflush(stdout);
+    
+    if (sbot_master) sbot_master->clear();
+    pros::delay(50);
+    
+    // Run selector for 30 seconds (like real disabled period)
+    uint32_t disabled_start = pros::millis();
+    while (pros::millis() - disabled_start < 30000) {
+        if (sbot_auton) sbot_auton->updateSelector();
+        
+        // Allow early exit with Y button
+        if (sbot_master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+            printf("Y pressed - ending disabled early\n");
+            break;
+        }
+        pros::delay(20);
+    }
+    
+    printf("\n--- SIMULATING AUTONOMOUS PHASE ---\n");
+    const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
+    const bool confirmed = sbot_auton->getSelector().isConfirmed();
+    printf("Selected mode: %d (confirmed: %s)\n", mode, confirmed ? "YES" : "NO");
+    fflush(stdout);
+    
+    if (sbot_auton) {
+        if (mode == 0 && !confirmed) {
+            printf("WARNING: Using fallback - Red Right\n");
+            sbot_auton->runRedRight();
+        } else {
+            sbot_auton->run();
+        }
+    }
+    
+    printf("\n--- TEST COMPLETE - Entering driver control ---\n");
+    fflush(stdout);
+    // Fall through to normal opcontrol
+    */
+    // =========================================================================
+
+    // ========== SELECTOR TEST MODE (SIMULATED BUTTON PRESSES) ==========
+    // Uncomment this block to test the selector with simulated button presses
+    // without needing a physical controller connected.
+    /*
+    printf("\n=== SELECTOR TEST MODE: SIMULATED BUTTON PRESSES ===\n");
+    fflush(stdout);
+    
+    if (sbot_auton) {
+        printf("TEST: Simulating 3x RIGHT button presses...\n");
+        fflush(stdout);
+        pros::delay(500);
+        sbot_auton->getSelector().simulateRightButton();  // Move to mode 1
+        pros::delay(500);
+        sbot_auton->getSelector().simulateRightButton();  // Move to mode 2
+        pros::delay(500);
+        sbot_auton->getSelector().simulateRightButton();  // Move to mode 3
+        pros::delay(500);
+        
+        printf("TEST: Simulating 1x LEFT button press...\n");
+        fflush(stdout);
+        sbot_auton->getSelector().simulateLeftButton();   // Back to mode 2
+        pros::delay(500);
+        
+        printf("TEST: Simulating A button (confirm)...\n");
+        fflush(stdout);
+        sbot_auton->getSelector().simulateConfirmButton(); // Confirm mode 2
+        pros::delay(500);
+        
+        printf("TEST: Final selected mode = %d (confirmed: %s)\n",
+               static_cast<int>(sbot_auton->getSelector().getMode()),
+               sbot_auton->getSelector().isConfirmed() ? "YES" : "NO");
+        fflush(stdout);
+        
+        printf("TEST: You should see mode 2 (Red Right) displayed on controller\n");
+        printf("=== SELECTOR TEST MODE COMPLETE ===\n\n");
+        fflush(stdout);
+        pros::delay(2000);
+    }
+    */
+    // ====================================================================
+
+    // ========== AUTONOMOUS SELECTOR - ALWAYS AVAILABLE ON STARTUP ==========
+    // Initialize and display selector immediately when program starts.
+    // This ensures selection is ALWAYS available, regardless of competition state.
+    printf("\nSBOT: Initializing autonomous selector on startup...\n");
+    fflush(stdout);
+    
+    if (sbot_master && sbot_master->is_connected()) {
+        sbot_master->clear();
+        pros::delay(50);
+        
+        // Force initial display
+        if (sbot_auton) {
+            sbot_auton->updateSelector();
+            printf("SBOT: Selector ready - use D-pad L/R + A anytime to select/change\n");
+            printf("SBOT: Current selection will be shown on controller screen\n");
+            fflush(stdout);
+        }
+    } else {
+        printf("SBOT: WARNING - Controller not connected, selector display unavailable\n");
+        printf("SBOT: Selector logic still active, will display when controller connects\n");
+        fflush(stdout);
+    }
+    // ========================================================================
+
     // Development-mode autonomous selection when not connected to competition control.
     // Mirrors the official project's workflow: allow a short selection window,
     // and (if confirmed) run the selected routine immediately.
@@ -132,29 +275,103 @@ void initialize() {
 void disabled() {
     printf("=== SBOT DISABLED() ENTER ===\n");
     printf("=== SBOT DISABLED - AUTON SELECTOR ACTIVE ===\n");
+    printf("SBOT: Selector was already initialized in initialize()\n");
+    printf("SBOT: Use D-pad L/R + A to change selection if needed\n");
     fflush(stdout);
-    // While disabled, allow autonomous selection via controller
+    
+    // Display current selection status
+    if (sbot_auton) {
+        const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
+        const bool confirmed = sbot_auton->getSelector().isConfirmed();
+        printf("SBOT: Current selection: mode %d (%s)\n",
+               mode, confirmed ? "CONFIRMED" : "not confirmed");
+        fflush(stdout);
+    }
+    
+    // Continue updating selector while disabled (allows changes)
+    int update_count = 0;
+    int refresh_counter = 0;
+    const int REFRESH_INTERVAL = 50; // Force screen refresh every 1 second
+    
     while (pros::competition::is_disabled()) {
-        if (sbot_auton) sbot_auton->updateSelector();
+        if (sbot_auton) {
+            sbot_auton->updateSelector();
+            
+            // Periodically force a display refresh
+            refresh_counter++;
+            if (refresh_counter >= REFRESH_INTERVAL) {
+                sbot_auton->getSelector().forceDisplayRefresh();
+                printf("SELECTOR: Forced screen refresh\n");
+                fflush(stdout);
+                refresh_counter = 0;
+            }
+        }
+        
+        update_count++;
+        if (update_count % 25 == 0) {
+            printf("SBOT: Selector active (updates: %d, time: ~%d sec)\n", 
+                   update_count, update_count / 50);
+            fflush(stdout);
+        }
         pros::delay(20);
     }
-    printf("=== SBOT EXITING DISABLED ===\n");
+    
+    // Show final selection
+    if (sbot_auton) {
+        const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
+        const bool confirmed = sbot_auton->getSelector().isConfirmed();
+        printf("SBOT: Final selection: mode %d (%s)\n",
+               mode, confirmed ? "CONFIRMED" : "not confirmed");
+        fflush(stdout);
+    }
+    
+    printf("=== SBOT EXITING DISABLED (ran %d updates over ~%d sec) ===\n", 
+           update_count, update_count / 50);
     fflush(stdout);
 }
 
 void competition_initialize() {
     printf("=== SBOT COMPETITION_INITIALIZE() ENTER ===\n");
     printf("=== SBOT COMPETITION INITIALIZE ===\n");
+    printf("SBOT: Selector already initialized in initialize()\n");
     fflush(stdout);
-    // Nothing special for now; selection handled in disabled/initialize
+    
+    // Just refresh the display (don't clear - preserves any selection made during initialize)
+    if (sbot_auton) {
+        printf("SBOT: Refreshing selector display for competition mode\n");
+        fflush(stdout);
+        sbot_auton->updateSelector();
+    }
 }
 
 void autonomous() {
     printf("=== SBOT AUTONOMOUS() ENTER ===\n");
     printf("=== SBOT AUTONOMOUS START ===\n");
     fflush(stdout);
-    if (!sbot_auton) return;
-    sbot_auton->run();
+    
+    if (sbot_auton) {
+        const int mode_num = static_cast<int>(sbot_auton->getSelector().getMode());
+        const bool confirmed = sbot_auton->getSelector().isConfirmed();
+        printf("SBOT: Running autonomous mode %d (confirmed: %s)\n", 
+               mode_num, confirmed ? "YES" : "NO");
+        fflush(stdout);
+        
+        // ONLY use fallback if mode is 0 (DISABLED) AND not confirmed
+        // If they selected mode 0 intentionally, respect that choice
+        if (mode_num == 0 && !confirmed) {
+            printf("WARNING: No valid mode selected! Using EMERGENCY FALLBACK: RED_RIGHT\n");
+            printf("WARNING: Next time, select autonomous during DISABLED period!\n");
+            fflush(stdout);
+            // Change this to your preferred safe autonomous:
+            sbot_auton->runRedRight();
+        } else {
+            // Run selected mode (even if mode 0 was intentionally selected)
+            sbot_auton->run();
+        }
+    } else {
+        printf("ERROR: sbot_auton not initialized\n");
+    }
+    
     printf("=== SBOT AUTONOMOUS COMPLETE ===\n");
     fflush(stdout);
 }
@@ -171,6 +388,7 @@ void opcontrol() {
     fflush(stdout);
 
     uint32_t last_heartbeat_ms = pros::millis();
+    uint32_t last_selector_update_ms = pros::millis();
 
     // Latched pneumatic states for toggle buttons
     bool goal_flap_latched_open = false;
@@ -211,8 +429,16 @@ void opcontrol() {
             continue;
         }
 
-        // Periodic heartbeat so you can confirm the program is alive in the terminal
-        const uint32_t now = pros::millis();
+        // Periodic heartbeat and selector update
+        uint32_t now = pros::millis();
+        
+        // Periodic selector update (every 2 seconds) to detect late controller connection
+        if (now - last_selector_update_ms > 2000) {
+            if (sbot_auton) sbot_auton->updateSelector();
+            last_selector_update_ms = now;
+        }
+
+        // Heartbeat so you can confirm the program is alive in the terminal
         if (now - last_heartbeat_ms >= 2000) {
             last_heartbeat_ms = now;
             printf("SBOT: opcontrol alive (%lu ms)\n", static_cast<unsigned long>(now));

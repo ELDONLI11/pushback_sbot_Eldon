@@ -15,6 +15,12 @@
 #include <cstdio>
 #include <cstring>
 
+// Global controller from main.cpp
+extern pros::Controller* sbot_master;
+
+// Track controller connection state for late connection detection
+static bool controller_was_connected = false;
+
 // LemLib path-follow assets must be declared at global scope.
 ASSET(sbot_awp_half_path_txt);
 ASSET(low_txt);
@@ -985,6 +991,7 @@ static void sbot_run_match_auto(
         uint32_t tube_pull_ms;                  // Loader pull duration
         bool use_tube1_contact;                 // Use contact point conversion
         SbotPoint tube1_contact;                // Loader bumper contact point
+        double tube_extra_seat_in;              // Extra distance to push into loader after contact
 
         // Stage 5: Long Goal scoring
         double high_goal_heading_deg;           // Long goal heading
@@ -1085,6 +1092,7 @@ static void sbot_run_match_auto(
         // Moved 2" closer to ensure full engagement.
         t.use_tube1_contact = true;
         t.tube1_contact = sbot_from_jerry(-73.0, 48.0);
+        t.tube_extra_seat_in = 2.0;
 
         // Solo AWP Stage 6: Second cluster collection
         // Source of truth: Jerry cluster 2 = (24, 24)
@@ -1865,6 +1873,7 @@ static void sbot_run_match_auto(
                     sbot_wait_until_done_or_timed_out_timed("match.approach_tube_pose", tube_wait_timeout_ms);
                     sbot_lemlib_debug_window_end("match.approach_tube_pose");
 
+                    // If still far away, retry with slower speed
                     {
                         const auto pose_now = sbot_chassis->getPose();
                         const double dx = tube_pose_target.x - pose_now.x;
@@ -1872,25 +1881,16 @@ static void sbot_run_match_auto(
                         const double dist = std::sqrt(dx * dx + dy * dy);
                         if (dist > 3.0) {
                             printf("TUBE retry: dist still %.2f in\n", dist);
-                            lemlib::MoveToPointParams retryDrive = driveParams;
-                            retryDrive.maxSpeed = 90;
                             sbot_print_jerry_target("tube_pose_target.retry", tube_pose_target.x, tube_pose_target.y);
 
+                            lemlib::MoveToPoseParams retryParams;
+                            retryParams.forwards = true;
+                            retryParams.maxSpeed = 90;
+                            retryParams.minSpeed = 0;
+
                             sbot_lemlib_debug_window_begin("match.approach_tube_pose.retry");
-                            sbot_turn_point_turn(
-                                "match.approach_tube_pose.retry",
-                                tube_pose_target.x,
-                                tube_pose_target.y,
-                                tube_heading,
-                                t.turn_timeout_ms,
-                                5000,
-                                turnParams,
-                                retryDrive,
-                                1100,
-                                250,
-                                1.0,
-                                8.0
-                            );
+                            sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, 5000, retryParams);
+                            sbot_wait_until_done_or_timed_out_timed("match.approach_tube_pose.retry", 1100);
                             sbot_lemlib_debug_window_end("match.approach_tube_pose.retry");
                         }
                     }
@@ -1910,17 +1910,13 @@ static void sbot_run_match_auto(
                     );
                 }
 
-                // Physical tuning: seat into the match loader a bit more.
-                // If we're ~2" short, this small forward nudge (while facing the loader) helps ensure engagement.
-                printf("TUBE seat push: +2in\n");
-                sbot_drive_relative_stall_exit(2.0, 900, true /* forwards */, 250, 0.20, 55);
-                
-                // Drive two more inches into tube and hold position firmly
-                printf("TUBE extra seat: +2in with HOLD\n");
-                if (sbot_chassis) {
-                    sbot_chassis->setBrakeMode(pros::E_MOTOR_BRAKE_HOLD);
-                    sbot_drive_relative(2.0, 800, true /* forwards */);
-                    // Keep HOLD active during loader pull
+                // Physical tuning: seat into the match loader using configurable extra distance.
+                if (t.tube_extra_seat_in > 0.0) {
+                    printf("TUBE extra seat: +%.1fin\n", t.tube_extra_seat_in);
+                    if (sbot_chassis) {
+                        sbot_chassis->setBrakeMode(pros::E_MOTOR_BRAKE_HOLD);
+                        sbot_drive_relative(t.tube_extra_seat_in, 800, true /* forwards */);
+                    }
                 }
             }
 
@@ -2153,10 +2149,11 @@ static const char* sbot_mode_name(int idx) {
         "Test: LowGoal (custom start)", // 16
         "Test: Pose Monitor (x,y,th)", // 17
         "Test: Follow Path (LemLib follow)", // 18
-        "Test: Pose Finder (x0 line, 90deg)" // 19
+        "Test: Pose Finder (x0 line, 90deg)", // 19
+        "Test: Drive Forward 2in" // 20
     };
 
-    if (idx < 0 || idx > 19) return "<invalid>";
+    if (idx < 0 || idx > 20) return "<invalid>";
     return mode_names[idx];
 }
 
@@ -2165,53 +2162,102 @@ static const char* sbot_mode_name(int idx) {
 SbotAutoSelector::SbotAutoSelector()
     : selected_mode(SbotAutoMode::DISABLED),
       selector_position(0),
-      mode_confirmed(false) {}
+      mode_confirmed(false),
+      last_confirmed_position(0) {}
 
 void SbotAutoSelector::displayOptions() {
     // Display on controller screen (legacy project behavior)
-    pros::Controller master(pros::E_CONTROLLER_MASTER);
-    if (!master.is_connected()) return;
+    if (!sbot_master || !sbot_master->is_connected()) {
+        controller_was_connected = false;  // Track disconnection
+        return;
+    }
+
+    // Detect if controller just connected (was disconnected, now connected)
+    bool just_connected = !controller_was_connected;
+    controller_was_connected = true;
+    
+    if (just_connected) {
+        printf("SELECTOR: Controller just connected - forcing display\n");
+        fflush(stdout);
+        // Clear screen when controller first connects
+        sbot_master->clear();
+        pros::delay(50);
+    }
+
+    // PROS throttles controller screen updates to ~50ms intervals.
+    // Only update display when state changes to avoid wasting cycles.
+    static int last_displayed_pos = -1;
+    static bool last_displayed_confirmed = false;
+    static bool first_display = true;
 
     const int idx = selector_position;
     const char* name = sbot_mode_name(idx);
 
+    // Always display on first call OR when controller just connected, then only when state changes
+    if (!first_display && !just_connected && idx == last_displayed_pos && mode_confirmed == last_displayed_confirmed) {
+        return;
+    }
+
+    first_display = false;
+    last_displayed_pos = idx;
+    last_displayed_confirmed = mode_confirmed;
+
     if (mode_confirmed) {
-        master.print(0, 0, "READY: %s", name);
-        master.print(1, 0, "A: change  L/R: nav");
+        printf("SELECTOR: Displaying CONFIRMED - '%s'\n", name);
+        sbot_master->print(0, 0, "READY: %s", name);
+        sbot_master->print(1, 0, "A: unlock L/R: nav");
     } else {
-        master.print(0, 0, "%d: %s", idx, name);
-        master.print(1, 0, "L/R: change  A: ok");
+        printf("SELECTOR: Displaying selection %d - '%s'\n", idx, name);
+        sbot_master->print(0, 0, "%d: %s", idx, name);
+        sbot_master->print(1, 0, "L/R: nav  A: confirm");
     }
 }
 
 void SbotAutoSelector::handleInput() {
-    pros::Controller master(pros::E_CONTROLLER_MASTER);
+    if (!sbot_master) return;
 
     static int last_pos = -1;
     static bool last_confirmed = false;
+    static bool initialized_from_last = false;
 
-    bool left_pressed = master.get_digital_new_press(SBOT_AUTO_PREV_BTN);
-    bool right_pressed = master.get_digital_new_press(SBOT_AUTO_NEXT_BTN);
-    bool a_pressed = master.get_digital_new_press(SBOT_AUTO_CONFIRM_BTN);
+    // On first call in disabled period, restore last confirmed selection
+    if (!initialized_from_last && last_confirmed_position > 0) {
+        selector_position = last_confirmed_position;
+        selected_mode = static_cast<SbotAutoMode>(last_confirmed_position);
+        mode_confirmed = true;
+        initialized_from_last = true;
+        printf("SELECTOR: Restored last confirmed selection: %d (%s)\n",
+               last_confirmed_position, sbot_mode_name(last_confirmed_position));
+    }
 
-    const int max_index = 19; // 0..19
+    bool left_pressed = sbot_master->get_digital_new_press(SBOT_AUTO_PREV_BTN);
+    bool right_pressed = sbot_master->get_digital_new_press(SBOT_AUTO_NEXT_BTN);
+    bool a_pressed = sbot_master->get_digital_new_press(SBOT_AUTO_CONFIRM_BTN);
+
+    const int max_index = 20; // 0..20
 
     if (!mode_confirmed) {
         if (left_pressed) {
+            printf("SELECTOR: LEFT button pressed\n");
             selector_position--;
             if (selector_position < 0) selector_position = max_index;
         }
         if (right_pressed) {
+            printf("SELECTOR: RIGHT button pressed\n");
             selector_position++;
             if (selector_position > max_index) selector_position = 0;
         }
         if (a_pressed) {
+            printf("SELECTOR: A button pressed - CONFIRMING mode %d\n", selector_position);
             selected_mode = static_cast<SbotAutoMode>(selector_position);
             mode_confirmed = true;
+            last_confirmed_position = selector_position;  // Save for next time
         }
     } else {
         if (a_pressed) {
+            printf("SELECTOR: A button pressed - UNLOCKING for reselection\n");
             mode_confirmed = false; // allow reselection
+            initialized_from_last = false;  // Allow re-initialization next disabled period
         }
     }
 
@@ -2234,6 +2280,63 @@ bool SbotAutoSelector::update() {
     handleInput();
     displayOptions();
     return mode_confirmed;
+}
+
+void SbotAutoSelector::forceDisplayRefresh() {
+    // Bypass the display throttling to force an update
+    // Useful during long disabled periods to prevent controller screen from blanking
+    if (!sbot_master || !sbot_master->is_connected()) return;
+    
+    const int idx = selector_position;
+    const char* name = sbot_mode_name(idx);
+    
+    if (mode_confirmed) {
+        sbot_master->print(0, 0, "READY: %s", name);
+        sbot_master->print(1, 0, "A: unlock L/R: nav");
+    } else {
+        sbot_master->print(0, 0, "%d: %s", idx, name);
+        sbot_master->print(1, 0, "L/R: nav  A: confirm");
+    }
+}
+
+// ======================= Test Methods for Simulated Input ===========
+
+void SbotAutoSelector::simulateLeftButton() {
+    printf("SELECTOR: [SIMULATED] LEFT button press\n");
+    const int max_index = 20;
+    if (!mode_confirmed) {
+        selector_position--;
+        if (selector_position < 0) selector_position = max_index;
+        printf("SBOT AUTO: select %d (%s) [SIMULATED]\n", 
+               selector_position, sbot_mode_name(selector_position));
+    }
+    displayOptions();
+}
+
+void SbotAutoSelector::simulateRightButton() {
+    printf("SELECTOR: [SIMULATED] RIGHT button press\n");
+    const int max_index = 20;
+    if (!mode_confirmed) {
+        selector_position++;
+        if (selector_position > max_index) selector_position = 0;
+        printf("SBOT AUTO: select %d (%s) [SIMULATED]\n",
+               selector_position, sbot_mode_name(selector_position));
+    }
+    displayOptions();
+}
+
+void SbotAutoSelector::simulateConfirmButton() {
+    printf("SELECTOR: [SIMULATED] A button press\n");
+    if (!mode_confirmed) {
+        selected_mode = static_cast<SbotAutoMode>(selector_position);
+        mode_confirmed = true;
+        printf("SBOT AUTO: READY %d (%s) [SIMULATED CONFIRMED]\n",
+               selector_position, sbot_mode_name(selector_position));
+    } else {
+        mode_confirmed = false;
+        printf("SBOT AUTO: UNLOCKED for reselection [SIMULATED]\n");
+    }
+    displayOptions();
 }
 
 // ======================= Autonomous System ==========================

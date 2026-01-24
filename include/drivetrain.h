@@ -24,7 +24,13 @@ private:
     pros::Motor right_middle;
     pros::Motor right_back;
 
+    // Previous motor commands for slew rate limiting
+    int prev_left_cmd = 0;
+    int prev_right_cmd = 0;
+
     int applyDeadzone(int value) const;
+    int applyCurve(int value) const;
+    int applySlewRate(int current, int target, int max_change) const;
 };
 
 #endif // _SBOT_DRIVETRAIN_H_

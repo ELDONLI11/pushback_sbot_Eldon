@@ -29,10 +29,10 @@
 // Intake / scoring system
 // Indexer: 2
 // Lower intake: 3
-// Upper intake: 10
+// Upper intake: 21
 #define SBOT_INDEXER_MOTOR_PORT        2
 #define SBOT_INTAKE_HELPER_MOTOR_PORT  3   // lower intake
-#define SBOT_INTAKE_MAIN_MOTOR_PORT    10  // upper intake
+#define SBOT_INTAKE_MAIN_MOTOR_PORT    21  // upper intake
 
 // Intake motor direction correction.
 // If one of the intake motors spins opposite of the other during intake,
@@ -106,6 +106,38 @@
 // Deadband and sensitivity for tank drive
 #define SBOT_JOYSTICK_DEADZONE     10
 #define SBOT_TANK_SENSITIVITY      1.0
+
+// ========== RESPONSE CURVE CONTROL ==========
+// Squared curve gives fine control at low speeds but can be aggressive
+// Set to false to use linear response (simpler, might help with tipping)
+#define SBOT_USE_SQUARED_CURVE     false
+
+// If using squared curve, this scales down the output to make it less aggressive
+// 1.0 = full squared curve, 0.5 = halfway between linear and squared
+// Only used if SBOT_USE_SQUARED_CURVE is true
+#define SBOT_CURVE_SCALING         0.7
+
+// ========== ADAPTIVE SLEW RATE LIMITING ==========
+// Prevents tipping by limiting how fast motor commands can change.
+// Uses different rates for normal acceleration vs direction reversals.
+
+// Normal slew rate (same direction, e.g., 50→100)
+// Higher = more responsive. Lower = smoother.
+// REDUCED to 8 (was 10 originally) for better tipping prevention
+#define SBOT_SLEW_RATE_NORMAL      15
+
+// Direction reversal slew rate (e.g., 100→-100)
+// Should be LOWER than normal to prevent tipping during reversals.
+// Recommended: 40-60% of SBOT_SLEW_RATE_NORMAL
+#define SBOT_SLEW_RATE_REVERSAL    4
+
+// Force stop before reversing direction?
+// If true, robot briefly goes to 0 before changing direction (safest)
+// If false, uses SBOT_SLEW_RATE_REVERSAL to gradually reverse (faster)
+#define SBOT_FORCE_STOP_ON_REVERSAL true
+
+// When forcing stop, how close to zero before allowing direction change?
+#define SBOT_REVERSAL_DEADBAND     3
 
 // Motor gearsets and brake modes
 #define SBOT_DRIVE_GEARSET         pros::v5::MotorGears::green
