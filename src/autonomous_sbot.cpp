@@ -40,8 +40,8 @@ static constexpr double SBOT_BACK_BUMPER_IN = 7.5;
 
 // Canonical Jerry starts (pose-point reference).
 // Red Right is mirrored across the Jerry X axis (Jerry Y is multiplied by -1).
-static constexpr double SBOT_JERRY_START_RL_X_BASE = -50.0;
-static constexpr double SBOT_JERRY_START_RL_Y_BASE = 15.0;
+static constexpr double SBOT_JERRY_START_RL_X_BASE = -46.5;
+static constexpr double SBOT_JERRY_START_RL_Y_BASE = 13;
 
 // Fine adjustments (inches) for on-field calibration.
 // If the robot is consistently ending too far RIGHT (+X in our frame), DECREASE the Y fine adjust.
@@ -756,6 +756,7 @@ static void sbot_score_low_for(uint32_t ms) {
 
 static void sbot_score_top_for(uint32_t ms) {
     if (!sbot_indexer) return;
+    // Open flap for scoring
     if (sbot_goal_flap) sbot_goal_flap->open();
     if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
     sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
@@ -1030,8 +1031,8 @@ static void sbot_run_match_auto(
         t.clear_barrier_in = 0.0;
 
         // Cluster (RED LEFT) from Jerry field points.
-        // Source of truth: Jerry cluster = (-24, 24)
-        t.cluster1 = sbot_from_jerry(-24.0, 24.0);
+        // Source of truth: Jerry cluster = (-21, 21)
+        t.cluster1 = sbot_from_jerry(-21.0, 21.0);
         t.cluster_collect_ms = 150;
 
         // Center Goal – Lower (RED LEFT / BLUE RIGHT): from the cluster,
@@ -1052,9 +1053,10 @@ static void sbot_run_match_auto(
         // Lower-goal scoring: add extra time to ensure balls fully clear.
         t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
         // Use a measured front-bumper contact point for the Center Goal.
-        // Source of truth (Jerry field coords, inches): (-9, 9)
+        // Moved 1 inch forward on diagonal (45°): +0.707" in both X and Y
+        // Source of truth (Jerry field coords, inches): (-8.3, 9.7)
         t.use_low_goal_contact = true;
-        t.low_goal_contact = sbot_from_jerry(-9.0, 9.0);
+        t.low_goal_contact = sbot_from_jerry(-8.3, 9.7);
 
         // Center Goal – Middle (back-score).
         t.mid_goal_approach = center_middle_approach;
@@ -1085,7 +1087,7 @@ static void sbot_run_match_auto(
 
         // Loader (tube) pose points (fallback when not using contact points).
         t.tube1 = {-33, -11.0};
-        t.tube_pull_ms = 1000;
+        t.tube_pull_ms = 100;
 
         // Loader contact point (field feature, Jerry coords): (-73, 48).
         // This is where the FRONT of the robot/loader should contact the match loader.
@@ -1114,7 +1116,7 @@ static void sbot_run_match_auto(
 
         // Timeouts: keep tight so we don't burn match time if something is slightly off.
         // We rely on pose-close exit thresholds to end motions quickly once we're in position.
-        t.drive_timeout_ms = 2500;
+        t.drive_timeout_ms = 5500;
         t.turn_timeout_ms = 1300;
 
         return t;
@@ -1128,7 +1130,7 @@ static void sbot_run_match_auto(
 
         // Replace Jerry-derived points with their mirrored Jerry counterparts.
         // NOTE: these calls depend on sbot_jerry_start_* having been set to the RR start.
-        t.cluster1 = sbot_from_jerry(-24.0, -24.0);
+        t.cluster1 = sbot_from_jerry(-21.0, -21.0);
 
         // Retreat point: (-48, 48) -> (-48, -48)
         t.use_post_score_retreat_point = true;
@@ -1260,11 +1262,14 @@ static void sbot_run_match_auto(
             // and that causes tube/long-goal alignment to drift.
         };
 
+        // Start intake at the very beginning of autonomous
+        sbot_intake_on_storage();
+        printf("AUTONOMOUS: intake started at beginning\n");
+
         if (!start_from_cluster_sweep) {
             // Stage 0: optional barrier clearance.
             if (t.clear_barrier_in > 0.0) {
                 printf("AWP STAGE 0: clear barrier\n");
-                sbot_intake_on_storage();
                 sbot_drive_relative(t.clear_barrier_in, 1200, true);
                 sbot_print_pose("after clear barrier");
             }
@@ -1306,7 +1311,7 @@ static void sbot_run_match_auto(
                 // Deploy loader DURING the drive (delayed to account for faster pneumatic deployment)
                 // Extra piston makes loader drop faster, so we wait even longer before deploying
                 // This lets the loader land ON TOP of the balls as we drive over them
-                pros::delay(1300); // Increased delay by 750ms to deploy matchloader later
+                pros::delay(1200); // Increased delay by 750ms to deploy matchloader later
                 if (sbot_batch_loader) {
                     sbot_batch_loader->extend();
                     printf("CLUSTER: loader deployed during approach\n");
@@ -1922,6 +1927,12 @@ static void sbot_run_match_auto(
 
             // Pull from the Loader while intaking + actuate batch loader.
             sbot_run_for_ms(t.tube_pull_ms);
+            
+            // IMMEDIATELY stop intake and open flap after matchloading
+            if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
+            if (sbot_goal_flap) sbot_goal_flap->open();
+            printf("MATCHLOADER: intake OFF, flap OPEN immediately after pull\n");
+            
             if (sbot_batch_loader) sbot_batch_loader->retract();
             pros::delay(60);
             
@@ -2062,8 +2073,8 @@ static void sbot_run_match_auto(
             sbot_drive_relative_stall_exit(24.0, 4000, false /* backwards */, 300, 0.35, 80);
         }
 
-        // Ensure we spend at least 1s actively scoring.
-        sbot_score_top_for(std::max<uint32_t>(t.high_goal_score_ms, 1000));
+        // Score for maximum time - let autonomous end while scoring (30s ensures we're always scoring)
+        sbot_score_top_for(30000);
         sbot_print_pose("after high goal");
         sbot_print_jerry_pose("after high goal");
 

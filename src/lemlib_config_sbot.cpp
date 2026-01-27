@@ -74,9 +74,13 @@ void initializeSbotLemLib() {
     sbot_inertial_sensor = new pros::Imu(SBOT_INERTIAL_PORT);
     sbot_vertical_encoder = new pros::Rotation(SBOT_ODOM_ROTATION_PORT);
 
+    // CRITICAL: Change this to match your actual tracking wheel size!
+    // Options: NEW_2 (2.125"), NEW_275 (2.75"), NEW_325 (3.25"), NEW_4 (4.0")
+    // If robot goes too far: wheel diameter is TOO SMALL (increase)
+    // If robot doesn't go far enough: wheel diameter is TOO LARGE (decrease)
     sbot_vertical_tracking_wheel = new lemlib::TrackingWheel(
         sbot_vertical_encoder,
-        lemlib::Omniwheel::NEW_2,
+        lemlib::Omniwheel::NEW_2,  // Changed from NEW_275 - robot not going far enough means diameter too large
         SBOT_TRACKING_WHEEL_DISTANCE
     );
 

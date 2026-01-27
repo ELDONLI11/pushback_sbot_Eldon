@@ -1,177 +1,99 @@
-#PATH-POINTS-START Path
-0,0,120,0
--0.491,1.917,120
--1.753,3.452,120
--3.396,4.583,120
--5.203,5.437,120
--7.086,6.109,120
--9.01,6.652,120
--10.959,7.102,120
--12.923,7.479,120
--14.897,7.798,120
--16.878,8.072,120
--18.864,8.307,120
--20.854,8.509,120
--22.846,8.684,120
--24.841,8.836,120
--26.836,8.966,120
--28.833,9.078,120
--30.831,9.174,120
--32.829,9.256,120
--34.828,9.326,120
--36.827,9.384,120
--38.827,9.433,120
--40.826,9.472,120
--42.826,9.504,120
--44.826,9.528,120
--46.826,9.545,120
--48.826,9.558,120
--50.826,9.565,120
--52.826,9.567,120
--54.826,9.566,120
--56.826,9.561,120
--58.826,9.554,120
--60.826,9.544,120
--62.826,9.532,120
--64.826,9.519,120
--66.825,9.505,120
--68.825,9.491,120
--70.825,9.476,120
--72.825,9.462,120
--74.825,9.448,120
--76.825,9.435,120
--78.825,9.424,120
--80.825,9.415,120
--82.825,9.409,120
--84.825,9.405,120
--86.825,9.405,120
--88.825,9.41,120
--90.825,9.418,120
--92.825,9.432,120
--94.825,9.452,120
--96.825,9.479,120
--98.825,9.513,120
--100.824,9.555,120
--102.823,9.606,120
--104.822,9.668,120
--106.821,9.742,120
--108.819,9.828,120
--110.817,9.93,120
--112.813,10.048,120
--114.808,10.186,120
--116.802,10.345,120
--118.794,10.527,120
--120.782,10.742,120
--122.767,10.989,120
--124.746,11.276,120
--126.717,11.615,120
--128.676,12.015,120
--130.619,12.491,120
--132.532,13.071,120
--134.394,13.799,120
--136.158,14.738,120
--137.707,15.993,120
--138.75,17.679,120
--138.96,19.655,120,0
--138.855,21.651,120
--138.6,23.635,120
--138.168,25.586,120
--137.528,27.48,120
--136.663,29.281,120
--135.57,30.955,120
--134.275,32.478,120
--132.818,33.847,120
--131.243,35.078,120
--129.587,36.199,120
--127.88,37.241,120
--126.141,38.228,120
--124.386,39.187,120
--122.625,40.136,120
--120.869,41.092,120
--119.123,42.068,120
--117.394,43.073,120
--115.687,44.116,120
--114.008,45.202,120
--112.36,46.335,120
--110.747,47.518,120
--109.174,48.752,120
--107.641,50.037,120
--106.152,51.372,120
--104.71,52.757,120,0
--103.364,54.235,120
--102.197,55.858,120
--101.286,57.635,120
--100.734,59.554,120
--100.62,61.546,120
--100.94,63.516,120
--101.618,65.395,120
--102.556,67.16,120
--103.676,68.816,120
--104.921,70.381,120
--106.254,71.872,120
--107.65,73.304,120
--109.093,74.689,120
--110.57,76.037,120
--112.072,77.357,120
--113.594,78.655,120
--115.129,79.938,120
--116.673,81.209,120
--118.223,82.473,120
--119.776,83.733,120
--121.329,84.993,120
--122.88,86.255,120
--124.428,87.522,120
--125.97,88.795,120
--127.505,90.078,120
--129.03,91.372,120
--130.544,92.678,120
--132.046,93.999,120
--133.534,95.335,120
--135.006,96.69,120
--136.46,98.062,120
--137.895,99.455,120
--139.31,100.869,120
--140.701,102.306,120
--142.067,103.767,120
--143.406,105.253,120
--144.716,106.764,120
--145.995,108.301,120
--147.241,109.865,120
--148.452,111.457,120,0
--149.621,113.08,120
--150.736,114.74,120
--151.777,116.447,120
--152.719,118.211,120
--153.508,120.048,120
--154.049,121.971,120
--154.157,123.961,120
--153.548,125.849,120
--152.189,127.297,120
--150.433,128.244,120
--148.529,128.852,120
--146.57,129.249,120
--144.588,129.513,120
--142.596,129.688,120
--140.599,129.804,120
--138.6,129.879,120
--136.601,129.927,120
--134.601,129.96,120
--132.601,129.985,120
--130.602,130.011,120
--128.602,130.042,120
--126.602,130.085,120
--124.603,130.145,120
--122.605,130.228,120
--120.608,130.338,120
--118.613,130.481,120
--116.622,130.664,120
--114.635,130.893,120
--112.655,131.173,120
--110.684,131.513,120
--108.726,131.922,120
--106.786,132.405,120
--104.869,132.977,120
--102.985,133.646,120
--100.55,134.699,120,0
--100.55,134.699,0,0
-#PATH.JERRYIO-DATA {"appVersion":"0.10.0","format":"path.jerryio v0.1","gc":{"robotWidth":30,"robotHeight":30,"robotIsHolonomic":false,"showRobot":false,"uol":1,"pointDensity":2,"controlMagnetDistance":5,"fieldImage":{"displayName":"V5RC 2026 - Push Back","signature":"V5RC-PushBack-H2H-TopDownHighlighted-TileColor66_71","origin":{"__type":"built-in"}},"coordinateSystem":"VEX Gaming Positioning System"},"paths":[{"segments":[{"controls":[{"uid":"iQzNRqCOID","x":0,"y":0,"lock":false,"visible":true,"heading":0,"__type":"end-point"},{"uid":"vu3dK1TzcK","x":0,"y":20,"lock":false,"visible":true,"__type":"control"},{"uid":"5BypDLbaIj","x":-138.96786632390746,"y":-1.028277634961438,"lock":false,"visible":true,"__type":"control"},{"uid":"m9owpJUgqt","x":-138.96786632390746,"y":18.971722365038563,"lock":false,"visible":true,"heading":0,"__type":"end-point"}],"speedProfiles":[],"lookaheadKeyframes":[],"uid":"hjvg1lDEn3"},{"controls":[{"uid":"m9owpJUgqt","x":-138.96786632390746,"y":18.971722365038563,"lock":false,"visible":true,"heading":0,"__type":"end-point"},{"uid":"UWhXFByGLE","x":-138.96786632390746,"y":38.971722365038566,"lock":false,"visible":true,"__type":"control"},{"uid":"RLdIswVslS","x":-121.89331619537276,"y":35.809125964010285,"lock":false,"visible":true,"__type":"control"},{"uid":"9nfWOst9Cr","x":-104.81876606683805,"y":52.64652956298201,"lock":false,"visible":true,"heading":0,"__type":"end-point"}],"speedProfiles":[],"lookaheadKeyframes":[],"uid":"zlvh1UsgXV"},{"controls":[{"uid":"9nfWOst9Cr","x":-104.81876606683805,"y":52.64652956298201,"lock":false,"visible":true,"heading":0,"__type":"end-point"},{"uid":"FJHE1XXa36","x":-87.74421593830334,"y":69.48393316195373,"lock":false,"visible":true,"__type":"control"},{"uid":"5RQLNP41QQ","x":-126.6362467866324,"y":82.05269922879178,"lock":false,"visible":true,"__type":"control"},{"uid":"zbVVTVtuEy","x":-148.45372750642673,"y":111.45886889460155,"lock":false,"visible":true,"heading":0,"__type":"end-point"}],"speedProfiles":[],"lookaheadKeyframes":[],"uid":"bpMqynio5z"},{"controls":[{"uid":"zbVVTVtuEy","x":-148.45372750642673,"y":111.45886889460155,"lock":false,"visible":true,"heading":0,"__type":"end-point"},{"uid":"IzD2qvMeaY","x":-170.27120822622106,"y":140.86503856041134,"lock":false,"visible":true,"__type":"control"},{"uid":"pYgoeueGc2","x":-124.50192802056554,"y":123.07904884318766,"lock":false,"visible":true,"__type":"control"},{"uid":"rVQnLjplaI","x":-100.55012853470437,"y":134.69922879177378,"lock":false,"visible":true,"heading":0,"__type":"end-point"}],"speedProfiles":[],"lookaheadKeyframes":[],"uid":"CHR622K8RM"}],"pc":{"speedLimit":{"minLimit":{"value":0,"label":"0"},"maxLimit":{"value":600,"label":"600"},"step":1,"from":40,"to":120},"bentRateApplicableRange":{"minLimit":{"value":0,"label":"0"},"maxLimit":{"value":1,"label":"1"},"step":0.001,"from":0,"to":0.1}},"name":"Path","uid":"DMrHZmEhqW","lock":false,"visible":true}]}
+
+=== SBOT INITIALIZE START ===
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+Initializing LemLib for sbot...
+SBOT BUILD TAG: Jan 26 2026 19:54:00
+Calibrating sbot chassis (IMU/odometry)...
+Sbot LemLib initialization complete.
+SBOT: subsystems created; defaults applied
+
+SBOT: Initializing autonomous selector...
+SBOT AUTO: select 0 (DISABLED) [L/R to change, A to confirm]
+SELECTOR: Controller just connected - forcing display
+SELECTOR: Displaying selection 0 - 'DISABLED'
+SBOT: Selector ready - use D-pad L/R + A anytime to select/change
+SBOT: Current selection will be shown on controller screen
+
+SBOT: Initializing autonomous selector on startup...
+SBOT: Selector ready - use D-pad L/R + A anytime to select/change
+SBOT: Current selection will be shown on controller screen
+SBOT: development mode (no competition control). Auto select open for 10s.
+SBOT: auto select... 10s left
+SBOT: auto select... 9s left
+SELECTOR: RIGHT button pressed
+SBOT AUTO: select 1 (Red Left) [L/R to change, A to confirm]
+SELECTOR: Displaying selection 1 - 'Red Left'
+SELECTOR: A button pressed - CONFIRMING mode 1
+SBOT AUTO: READY 1 (Red Left)
+SELECTOR: Displaying CONFIRMED - 'Red Left'
+SBOT: auto mode confirmed
+SBOT: DEV MODE running selected autonomous mode: 1
+SBOT ELAPSED [auton_start]: 0 ms (0.00 s)
+SBOT AUTON: AWP HALF (RED LEFT)
+SBOT BUILD TAG: Jan 26 2026 20:09:49
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT POSE [awp start]: x=0.00 y=0.00 th=0.00
+-46.500,13.000,120
+AUTONOMOUS: intake started at beginning
+AWP STAGE 1: cluster collect
+SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+CLUSTER: loader deployed during approach
+CLUSTER: intake ON during approach
+SBOT WAIT [match.cluster.reach]: 0 ms
+SBOT POSE [after cluster]: x=-11.05 y=22.30 th=-27.72
+-24.195,24.046,120
+AWP STAGE 2: CENTER LOWER (front score)
+SBOT WAIT [match.turn_to]: 390 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+CENTER LOWER contact->pose: contact(4.00,37.50) heading=45.0 front=7.50 => pose(-1.30,32.20)
+LOW GOAL drive_to: from(-11.20,22.32,45.9) to(-1.30,32.20,45.0) d=(9.90,9.87)
+SBOT TARGET JERRY [low_goal_pose_target]: our(-1.30,32.20) => jerry(-14.303,14.303)
+SBOT WAIT [match.approach_low_goal_pose.pre_turn]: 160 ms
+SBOT WAIT TRACE [match.approach_low_goal_pose.drive] t=200ms dist=10.87 hErr=1.01 pose(-9.01,24.53,44.1) dPose=3.12 vert.in=28.77 dVert=3.82 imu.h=44.0 imu.r=44.0
+SBOT WAIT TRACE [match.approach_low_goal_pose.drive] t=400ms dist=2.41 hErr=3.08 pose(-3.19,30.69,42.1) dPose=8.48 vert.in=37.31 dVert=8.53 imu.h=41.9 imu.r=41.9
+SBOT WAIT [match.approach_low_goal_pose.drive]: 440 ms (close) endDist=1.01 endHErr=3.82 inMotion=0
+SBOT WAIT [match.approach_low_goal_pose.post_turn]: 310 ms
+LOW GOAL after turn+moveToPoint+turn: at(-0.63,33.57,43.9) err=(-0.67,-1.37) dist=1.53
+LOW GOAL contact check: expected(4.00,37.50) est(4.57,38.97) d=(-0.57,-1.47) dist=1.57 heading=43.9
+SBOT SCORE LOW: 1570 ms (requested 1450 ms, avg 1570 ms over 1 runs)
+SBOT ELAPSED [low_goal_score_done]: 5230 ms (5.23 s)
+SBOT POSE [after center lower (front)]: x=-0.63 y=33.57 th=43.84
+-12.931,13.628,120
+SBOT POSE JERRY [after center lower (front)]: our(-0.63,33.57,43.84) => jerry(-12.931,13.628)
+AWP STAGE 3: retreat + face loader
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+RETREAT target: (-35.00, -1.50)
+SBOT WAIT TRACE [match.retreat.drive] t=200ms dist=46.09 hErr=1.32 pose(-2.74,31.42,45.1) dPose=3.01 vert.in=36.66 dVert=-3.74 imu.h=45.1 imu.r=45.1
+SBOT WAIT TRACE [match.retreat.drive] t=400ms dist=37.97 hErr=1.23 pose(-8.49,25.69,45.1) dPose=8.12 vert.in=28.40 dVert=-8.26 imu.h=45.1 imu.r=45.1
+SBOT WAIT TRACE [match.retreat.drive] t=600ms dist=28.65 hErr=0.98 pose(-15.08,19.09,44.8) dPose=9.33 vert.in=18.93 dVert=-9.48 imu.h=44.8 imu.r=44.8
+SBOT WAIT TRACE [match.retreat.drive] t=800ms dist=18.74 hErr=0.72 pose(-22.05,12.05,44.6) dPose=9.91 vert.in=9.03 dVert=-9.89 imu.h=44.5 imu.r=44.5
+SBOT WAIT TRACE [match.retreat.drive] t=1000ms dist=8.70 hErr=0.13 pose(-29.07,4.87,44.0) dPose=10.04 vert.in=-1.01 dVert=-10.05 imu.h=44.0 imu.r=44.0
+SBOT WAIT [match.retreat.drive]: 1180 ms (close) endDist=0.87 endHErr=1.34 inMotion=0
+SBOT POSE [after retreat (pre-turn)]: x=-34.48 y=-0.80 th=42.65
+-47.300,47.475,120
+SBOT POSE JERRY [after retreat (pre-turn)]: our(-34.48,-0.80,42.65) => jerry(-47.300,47.475)
+FACE LOADER turn_to: canonical=180.0 transformed=180.0 startPose.th=42.65 imu=42.50
+SBOT WAIT [match.turn_to]: 630 ms
+FACE LOADER after turn: pose.th=180.61 imu=180.98 errPose=-0.61 errImu=-0.98
+SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+SBOT POSE [after retreat/turn]: x=-36.09 y=-2.11 th=179.76
+-48.605,49.090,120
+SBOT SENSORS [after retreat/turn]: imu.heading=179.75 imu.rotation=179.75 vertRot.pos=-43348.00 vert.in=-10.40
+AWP STAGE 4: loader1 pull
+TUBE contact->pose: contact(-35.00,-26.50) heading=180.0 frontEff=13.50 => pose(-35.00,-13.00)
+TUBE moveToPose: from(-36.09,-2.11,179.7) to(-35.00,-13.00,180.0) d=(1.09,-10.89)
+SBOT TARGET JERRY [tube_pose_target]: our(-35.00,-13.00) => jerry(-59.500,48.000)
+SBOT WAIT [match.approach_tube_pose]: 900 ms (timed out)
+TUBE after turn+moveToPoint+turn: at(-34.91,-12.97,180.1) err=(-0.09,-0.03)
+TUBE extra seat: +2.0in
+SBOT WAIT [drive_relative]: 800 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+MATCHLOADER: intake OFF, flap OPEN for long goal
+SBOT POSE [after loader1 (relative)]: x=-34.92 y=-13.56 th=182.68
+-60.057,47.916,120
+SBOT POSE JERRY [after loader1 (relative)]: our(-34.92,-13.56,182.68) => jerry(-60.057,47.916)
+AWP STAGE 5: second score
+AWP STAGE 5: LONG GOAL END (near loader)
+LONG GOAL end: canonical(-35.00,15.50) Jerry(-31.0,48.0)
+SBOT WAIT [match.long_goal_approach]: 1140 ms
+SBOT WAIT [drive_relative_stall_exit]: 410 ms

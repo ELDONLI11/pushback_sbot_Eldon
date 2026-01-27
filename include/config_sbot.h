@@ -123,13 +123,12 @@
 
 // Normal slew rate (same direction, e.g., 50→100)
 // Higher = more responsive. Lower = smoother.
-// REDUCED to 8 (was 10 originally) for better tipping prevention
-#define SBOT_SLEW_RATE_NORMAL      15
+#define SBOT_SLEW_RATE_NORMAL      12
 
 // Direction reversal slew rate (e.g., 100→-100)
 // Should be LOWER than normal to prevent tipping during reversals.
 // Recommended: 40-60% of SBOT_SLEW_RATE_NORMAL
-#define SBOT_SLEW_RATE_REVERSAL    4
+#define SBOT_SLEW_RATE_REVERSAL    6
 
 // Force stop before reversing direction?
 // If true, robot briefly goes to 0 before changing direction (safest)
@@ -148,7 +147,7 @@
 
 // Intake and indexer speeds (RPM, sign defines direction)
 #define SBOT_INTAKE_FORWARD_SPEED        600   // Pull balls into robot
-#define SBOT_INTAKE_REVERSE_LOW_GOAL    -400   // Spit balls out low
+#define SBOT_INTAKE_REVERSE_LOW_GOAL    -600   // Spit balls out low (much higher speed)
 
 #define SBOT_INDEXER_FORWARD_FEED       500   // Toward top goal
 #define SBOT_INDEXER_REVERSE_MIDDLE    -400   // Drop to middle goal / eject
