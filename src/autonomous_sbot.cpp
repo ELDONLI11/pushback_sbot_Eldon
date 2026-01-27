@@ -1306,7 +1306,7 @@ static void sbot_run_match_auto(
                 // Deploy loader DURING the drive (delayed to account for faster pneumatic deployment)
                 // Extra piston makes loader drop faster, so we wait even longer before deploying
                 // This lets the loader land ON TOP of the balls as we drive over them
-                pros::delay(550);
+                pros::delay(1300); // Increased delay by 750ms to deploy matchloader later
                 if (sbot_batch_loader) {
                     sbot_batch_loader->extend();
                     printf("CLUSTER: loader deployed during approach\n");
@@ -2662,6 +2662,7 @@ void SbotAutonomousSystem::runTestFollowJerryPath() {
     lemlib::MoveToPointParams post_drive_params;
     post_drive_params.forwards = true;
     post_drive_params.maxSpeed = kPostDriveMaxSpeed;
+    post_drive_params.minSpeed = 0;
 
     // 1) Wait after follow completes
     pros::delay(250);
@@ -2726,99 +2727,6 @@ void SbotAutonomousSystem::runTestFollowJerryPath() {
     printf("SBOT POSTFOLLOW: turn to imu=170\n");
     sbot_chassis->turnToHeading(170.0, 2500, post_turn_params);
     sbot_wait_until_done_timed("postfollow.turn_to_170");
-
-    // 9) Low score
-    sbot_score_low_for(1500);
-
-    // LemLib logs remain at WARN.
-    // Conversion: pose=180° → std=90° (std = pose - 90)
-    // Delta from start: std_target - std_start = 90° - 0° = +90°
-    // Convert to imu.heading: imu = -std mod 360 = -90° = 270°
-    printf("SBOT POSTFOLLOW: turn to 180\n");
-    const double delta_180 = 180.0 - kStartPoseHeading;  // +90° in pose/std frame
-    const double std_target_180 = start_imu_heading + delta_180;  // 0 + 90 = 90°
-    const double imu_target_180 = sbot_norm_heading(-std_target_180);  // -90 = 270°
-    printf("  DEBUG: delta=%.1f, std_target=%.1f, imu_target=%.1f\n", delta_180, std_target_180, imu_target_180);
-    sbot_chassis->turnToHeading(imu_target_180, 2500, post_turn_params);
-    sbot_wait_until_done_timed("postfollow.turn_to_180");
-    sbot_wait_until_done_timed("postfollow.turn_to_180");
-
-    // 3) Drop loader down and wait 1 second.
-    if (sbot_batch_loader) sbot_batch_loader->extend();
-    pros::delay(1000);
-
-    // 4) Move to -24,24,135 (45° right from start).
-    // Conversion: pose=135° → std=45° (std = pose - 90)
-    // Delta from start: std_target - std_start = 45° - 0° = +45°
-    // Convert to imu.heading: imu = -std mod 360 = -45° = 315°
-    {
-        const double delta_135 = 135.0 - kStartPoseHeading;  // +45° in pose/std frame
-        const double std_target_135 = start_imu_heading + delta_135;  // 0 + 45 = 45°
-        const float target_heading_imu = static_cast<float>(sbot_norm_heading(-std_target_135));  // -45 = 315°
-        printf("SBOT POSTFOLLOW: move to (-24, 24) endHeading=135 (imu=%.1f)\n", target_heading_imu);
-        sbot_turn_point_turn(
-            "postfollow_to_-24_24",
-            -24.0f,
-            24.0f,
-            target_heading_imu,
-            2500,
-            4000,
-            post_turn_params,
-            post_drive_params
-        );
-    }
-
-    // 5) Turn in place to 135 degrees (45° right from start).
-    // Conversion: pose=135° → std=45° (std = pose - 90)
-    // Delta from start: std_target - std_start = 45° - 0° = +45°
-    // Convert to imu.heading: imu = -std mod 360 = -45° = 315°
-    printf("SBOT POSTFOLLOW: turn to 135\n");
-    const double delta_135 = 135.0 - kStartPoseHeading;  // +45° in pose/std frame
-    const double std_target_135 = start_imu_heading + delta_135;  // 0 + 45 = 45°
-    const double imu_target_135 = sbot_norm_heading(-std_target_135);  // -45 = 315°
-    sbot_chassis->turnToHeading(imu_target_135, 2500, post_turn_params);
-    sbot_wait_until_done_timed("postfollow.turn_to_135");
-
-    // Lift matchloader after moving to 135 degrees.
-    if (sbot_batch_loader) sbot_batch_loader->retract();
-
-    // 6) Drive to pose -9,9,135 (backing up at the same angle, 45° right from start).
-    // Conversion: pose=135° → std=45° (std = pose - 90)
-    // Delta from start: std_target - std_start = 45° - 0° = +45°
-    // Convert to imu.heading: imu = -std mod 360 = -45° = 315°
-    {
-        const double delta_135_back = 135.0 - kStartPoseHeading;  // +45° in pose/std frame
-        const double std_target_135_back = start_imu_heading + delta_135_back;  // 0 + 45 = 45°
-        const float target_heading_imu = static_cast<float>(sbot_norm_heading(-std_target_135_back));  // -45 = 315°
-        printf("SBOT POSTFOLLOW: drive to (-9, 9) endHeading=135 (imu=%.1f)\n", target_heading_imu);
-        sbot_turn_point_turn(
-            "postfollow_to_-9_9",
-            -9.0f,
-            9.0f,
-            target_heading_imu,
-            2500,
-            4000,
-            post_turn_params,
-            post_drive_params,
-            0,
-            0,
-            0.0,
-            0.0,
-            false,
-            true
-        );
-    }
-
-    // 7) Turn to 45 degrees (45° left from start).
-    // Conversion: pose=45° → std=-45°=315° (std = pose - 90)
-    // Delta from start: std_target - std_start = -45° - 0° = -45°
-    // Convert to imu.heading: imu = -std mod 360 = -(-45) = 45°
-    printf("SBOT POSTFOLLOW: turn to 45\n");
-    const double delta_45 = 45.0 - kStartPoseHeading;  // -45° in pose/std frame
-    const double std_target_45 = start_imu_heading + delta_45;  // 0 + (-45) = -45° = 315°
-    const double imu_target_45 = sbot_norm_heading(-std_target_45);  // -315 = 45°
-    sbot_chassis->turnToHeading(imu_target_45, 2500, post_turn_params);
-    sbot_wait_until_done_timed("postfollow.turn_to_45");
 
     // 9) Low score
     sbot_score_low_for(1500);
@@ -3041,9 +2949,9 @@ void SbotAutonomousSystem::runTestDriveShort() {
     // Target pose: end at (9,9,45)
     constexpr float kTargetX = 9.0f;
     constexpr float kTargetY = 9.0f;
-    constexpr float kTargetTheta = 45.0f;
+    constexpr float kTargetThetaDeg = 45.0f;
     constexpr int kTimeoutMs = 4500;
-    printf("SBOT SHORT DRIVE: start(0,0,0) -> target(%.2f,%.2f,%.1f)\n", kTargetX, kTargetY, kTargetTheta);
+    printf("SBOT SHORT DRIVE: start(0,0,0) -> target(%.2f,%.2f,%.1f)\n", kTargetX, kTargetY, kTargetThetaDeg);
 
     lemlib::TurnToHeadingParams turnParams;
     turnParams.maxSpeed = 70;
@@ -3060,7 +2968,7 @@ void SbotAutonomousSystem::runTestDriveShort() {
         "test.drive.short.target",
         kTargetX,
         kTargetY,
-        kTargetTheta,
+        kTargetThetaDeg,
         2500,
         static_cast<uint32_t>(kTimeoutMs),
         turnParams,
