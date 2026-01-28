@@ -1138,7 +1138,7 @@ static void sbot_run_match_auto(
 
         // Center Goal contacts mirrored.
         if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
-        if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
+        if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-6.0, -6.0);  // Center goal at (-6, -6) for Red Right
 
         // Tube contact mirrored: (-73, 48) -> (-73, -48)
         if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(-73.0, -48.0);
@@ -1159,23 +1159,24 @@ static void sbot_run_match_auto(
         t.tube2 = sbot_mirror_point_x(t.tube2);
         t.tube2_pulloff = sbot_mirror_point_x(t.tube2_pulloff);
 
-        // Mirror headings.
-        t.low_goal_heading_deg = sbot_mirror_heading(t.low_goal_heading_deg);
-        t.mid_goal_heading_deg = sbot_mirror_heading(t.mid_goal_heading_deg);
-        t.high_goal_heading_deg = sbot_mirror_heading(t.high_goal_heading_deg);
-        t.tube_face_heading_deg = sbot_mirror_heading(t.tube_face_heading_deg);
-
         // Override Stage 2: RED RIGHT should use Center Goal – Middle (back-score).
         const double center_middle_dx = 0.0;
         const double center_middle_dy = 13.0;
         t.mid_goal_approach = {t.cluster1.x + center_middle_dx, t.cluster1.y + center_middle_dy};
-        t.mid_goal_heading_deg = 180;
+        // Use 225° which will be mirrored to 135° for the diagonal backwards approach
+        t.mid_goal_heading_deg = 225;
 
         // Keep Center-Lower distinct (not used in this path).
         const double center_lower_dx = 13.0;
         const double center_lower_dy = 13.0;
         t.low_goal_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
         t.low_goal_heading_deg = 45;
+
+        // Mirror headings AFTER overrides
+        t.low_goal_heading_deg = sbot_mirror_heading(t.low_goal_heading_deg);
+        t.mid_goal_heading_deg = sbot_mirror_heading(t.mid_goal_heading_deg);
+        t.high_goal_heading_deg = sbot_mirror_heading(t.high_goal_heading_deg);
+        t.tube_face_heading_deg = sbot_mirror_heading(t.tube_face_heading_deg);
 
         return t;
     };
@@ -1578,6 +1579,7 @@ static void sbot_run_match_auto(
                 }
 
                 // Use pose pursuit so we converge x/y AND end square to the goal.
+                // This follows the same pattern as Red Left low goal approach.
                 {
                     lemlib::TurnToHeadingParams turnParams;
                     turnParams.maxSpeed = SBOT_MATCH_TURN_MAX_SPEED;
@@ -1589,7 +1591,7 @@ static void sbot_run_match_auto(
                     driveParams.minSpeed = 0;
                     driveParams.earlyExitRange = 0;
 
-                    const uint32_t goal_wait_timeout_ms = t.drive_timeout_ms;
+                    const uint32_t goal_wait_timeout_ms = 1900;
                     const uint32_t goal_motion_timeout_ms = 9000;
                     {
                         const auto pose0 = sbot_chassis->getPose();
@@ -1621,8 +1623,8 @@ static void sbot_run_match_auto(
                         turnParams,
                         driveParams,
                         goal_wait_timeout_ms,
-                        650,
-                        0.5,
+                        400,
+                        1.25,
                         6.0
                     );
                     sbot_lemlib_debug_window_end("match.approach_mid_goal_pose");
@@ -1635,7 +1637,7 @@ static void sbot_run_match_auto(
                         if (dist > 3.0) {
                             printf("MID GOAL retry: dist still %.2f in\n", dist);
                             lemlib::MoveToPointParams retryDrive = driveParams;
-                            retryDrive.maxSpeed = 85;
+                            retryDrive.maxSpeed = 90;
                             sbot_print_jerry_target("mid_goal_pose_target.retry", mid_target.x, mid_target.y);
 
                             sbot_lemlib_debug_window_begin("match.approach_mid_goal_pose.retry");
@@ -1648,9 +1650,9 @@ static void sbot_run_match_auto(
                                 5000,
                                 turnParams,
                                 retryDrive,
-                                1800,
-                                450,
-                                0.5,
+                                1100,
+                                300,
+                                1.25,
                                 6.0
                             );
                             sbot_lemlib_debug_window_end("match.approach_mid_goal_pose.retry");
@@ -1797,7 +1799,7 @@ static void sbot_run_match_auto(
         }
 
         // Deploy the match loader AFTER the face-loader turn so the pneumatic impulse doesn't disturb heading.
-        if (low_goal_case && sbot_batch_loader) {
+        if (sbot_batch_loader) {
             sbot_batch_loader->extend();
             // Wait longer for loader to fully deploy before approaching tube.
             // The loader needs time to descend completely before we drive forward.
@@ -2061,16 +2063,31 @@ static void sbot_run_match_auto(
             
             // Final push into goal with stall detection
             sbot_drive_relative_stall_exit(4.0, 1500, false /* backwards */, 300, 0.35, 40);
-        } else if (t.high_goal_back_in_from_tube_in > 0.0) {
-            // We just finished loader pulling while facing the loader.
-            // Backing up keeps the intake facing the loader and puts the rear into the Long Goal end.
-            sbot_intake_on_storage();
-            sbot_drive_relative_stall_exit(t.high_goal_back_in_from_tube_in, 4000, false /* backwards */, 300, 0.35, 80);
         } else {
-            // Fallback: use relative drive (high_goal_approach removed).
-            turn_to(t.high_goal_heading_deg);
+            // Red Right (and Blue Left): Back into long goal at Jerry (-31, -48).
+            // Same pattern as Red Left but mirrored Y coordinate.
             sbot_intake_on_storage();
-            sbot_drive_relative_stall_exit(24.0, 4000, false /* backwards */, 300, 0.35, 80);
+            const SbotPoint long_goal_end_canonical = sbot_from_jerry(-31.0, -48.0);
+            printf("LONG GOAL end: canonical(%.2f,%.2f) Jerry(-31.0,-48.0)\n",
+                   long_goal_end_canonical.x, long_goal_end_canonical.y);
+            
+            // Faster backwards approach to long goal
+            if (sbot_chassis) {
+                const SbotPoint target = sbot_apply_alliance_transform_only(long_goal_end_canonical, alliance_);
+                const double target_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance_);
+                lemlib::MoveToPoseParams params;
+                params.forwards = false;
+                params.maxSpeed = 90;
+                params.minSpeed = 0;
+                
+                sbot_chassis->moveToPose(target.x, target.y, target_heading, t.drive_timeout_ms, params);
+                sbot_wait_until_done_or_timed_out_timed("match.long_goal_approach", t.drive_timeout_ms);
+            } else {
+                drive_to(long_goal_end_canonical, false /* backwards */);
+            }
+            
+            // Final push into goal with stall detection
+            sbot_drive_relative_stall_exit(4.0, 1500, false /* backwards */, 300, 0.35, 40);
         }
 
         // Score for maximum time - let autonomous end while scoring (30s ensures we're always scoring)
