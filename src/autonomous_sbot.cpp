@@ -984,6 +984,7 @@ static void sbot_run_match_auto(
         // Stage 3: Retreat after first score
         bool use_post_score_retreat_point;      // Use absolute retreat point
         SbotPoint post_score_retreat_point;     // Retreat endpoint (absolute pose)
+        SbotPoint retreat_point_adjustment;     // Fine-tune retreat for drift compensation (added to retreat point)
         double tube_face_heading_deg;           // Heading to face loader
 
         // Stage 4: Loader pull
@@ -1078,6 +1079,7 @@ static void sbot_run_match_auto(
         t.use_post_score_retreat_point = true;
         // Source of truth: Jerry retreat = (-48, 48)
         t.post_score_retreat_point = sbot_from_jerry(-48.0, 48.0);
+        t.retreat_point_adjustment = {0.0, 0.0};  // Red Left: no adjustment needed
 
         // After retreat, turn to face alliance wall where the loader is.
         t.tube_face_heading_deg = 180;
@@ -1135,6 +1137,9 @@ static void sbot_run_match_auto(
         // Retreat point: (-48, 48) -> (-48, -48)
         t.use_post_score_retreat_point = true;
         t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
+        // Red Right: compensate for rightward drift during backward retreat
+        // Robot tends to end ~0.5" too far right, so shift retreat point left
+        t.retreat_point_adjustment = {0.0, -0.75};
 
         // Center Goal contacts mirrored.
         if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
@@ -1696,7 +1701,10 @@ static void sbot_run_match_auto(
         // Retreat: either to an absolute point (preferred for RL non-solo), or straight back-out.
         if (t.use_post_score_retreat_point) {
             // Do NOT turn here. Back straight to the retreat point, then turn at the retreat.
-            const SbotPoint retreat = sbot_apply_alliance_transform_only(t.post_score_retreat_point, alliance_);
+            SbotPoint retreat_base = t.post_score_retreat_point;
+            retreat_base.x += t.retreat_point_adjustment.x;
+            retreat_base.y += t.retreat_point_adjustment.y;
+            const SbotPoint retreat = sbot_apply_alliance_transform_only(retreat_base, alliance_);
             printf("RETREAT target: (%.2f, %.2f)\n", retreat.x, retreat.y);
             if (sbot_chassis) {
                 const double retreat_heading = sbot_get_best_heading_deg();
