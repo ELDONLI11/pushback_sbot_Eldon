@@ -1089,7 +1089,7 @@ static void sbot_run_match_auto(
 
         // Loader (tube) pose points (fallback when not using contact points).
         t.tube1 = {-33, -11.0};
-        t.tube_pull_ms = 100;
+        t.tube_pull_ms = 1500;
 
         // Loader contact point (field feature, Jerry coords): (-73, 48).
         // This is where the FRONT of the robot/loader should contact the match loader.
@@ -1139,7 +1139,7 @@ static void sbot_run_match_auto(
         t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
         // Red Right: compensate for rightward drift during backward retreat
         // Robot tends to end ~0.5" too far right, so shift retreat point left
-        t.retreat_point_adjustment = {0.0, -0.75};
+        t.retreat_point_adjustment = {0.0, 0.0};
 
         // Center Goal contacts mirrored.
         if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
