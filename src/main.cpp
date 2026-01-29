@@ -359,11 +359,11 @@ void autonomous() {
         // ONLY use fallback if mode is 0 (DISABLED) AND not confirmed
         // If they selected mode 0 intentionally, respect that choice
         if (mode_num == 0 && !confirmed) {
-            printf("WARNING: No valid mode selected! Using EMERGENCY FALLBACK: RED_RIGHT\n");
+            printf("WARNING: No valid mode selected! Using EMERGENCY FALLBACK: RIGHT\n");
             printf("WARNING: Next time, select autonomous during DISABLED period!\n");
             fflush(stdout);
             // Change this to your preferred safe autonomous:
-            sbot_auton->runRedRight();
+            sbot_auton->runRight();
         } else {
             // Run selected mode (even if mode 0 was intentionally selected)
             sbot_auton->run();

@@ -13,26 +13,23 @@
 
 enum class SbotAutoMode {
     DISABLED = 0,
-    RED_LEFT,
-    RED_RIGHT,
-    BLUE_LEFT,
-    BLUE_RIGHT,
-    RED_LEFT_SOLO_AWP,
-    RED_RIGHT_SOLO_AWP,
-    BLUE_LEFT_SOLO_AWP,
-    BLUE_RIGHT_SOLO_AWP,
-    SKILLS,
-    TEST_SWEEP_TO_LOW_GOAL,
-    TEST_DRIVE,
-    TEST_TURN,
-    TEST_INTAKE,
-    TEST_INDEXER,
-    TEST_DRIVE_SHORT,
-    TEST_LOW_GOAL_CUSTOM_START,
-    TEST_JERRY_POSE_MONITOR,
-        TEST_FOLLOW_JERRY_PATH,
-        TEST_POSE_FINDER_X0_LINE_90,
-        TEST_DRIVE_FORWARD_2IN
+    LEFT,                       // 1 (was RED_LEFT)
+    RIGHT,                      // 2 (was RED_RIGHT)
+    RED_LEFT_SOLO_AWP,          // 3 (was 5)
+    BLUE_LEFT_SOLO_AWP,         // 4 (was 7)
+    BLUE_RIGHT_SOLO_AWP,        // 5 (was 8)
+    SKILLS,                     // 6 (was 9)
+    TEST_SWEEP_TO_LOW_GOAL,     // 7 (was 10)
+    TEST_DRIVE,                 // 8 (was 11)
+    TEST_TURN,                  // 9 (was 12)
+    TEST_INTAKE,                // 10 (was 13)
+    TEST_INDEXER,               // 11 (was 14)
+    TEST_DRIVE_SHORT,           // 12 (was 15)
+    TEST_LOW_GOAL_CUSTOM_START, // 13 (was 16)
+    TEST_JERRY_POSE_MONITOR,    // 14 (was 17)
+    TEST_FOLLOW_JERRY_PATH,     // 15 (was 18)
+    TEST_POSE_FINDER_X0_LINE_90,// 16 (was 19)
+    TEST_DRIVE_FORWARD_2IN      // 17 (was 20)
 };
 
 class SbotAutoSelector {
@@ -66,7 +63,7 @@ public:
     void initialize();
     void updateSelector();
     void run(); // call from autonomous()
-    void runRedRight(); // Exposed for emergency fallback
+    void runRight(); // Exposed for emergency fallback
 
     SbotAutoSelector& getSelector() { return selector; }
 
@@ -74,9 +71,7 @@ private:
     SbotAutoSelector selector;
 
     // Simple stubs for now – can be filled with LemLib paths later
-    void runRedLeft();
-    void runBlueLeft();
-    void runBlueRight();
+    void runLeft();
     void runSkills();
 
     void runTestSweepToLowGoal();
