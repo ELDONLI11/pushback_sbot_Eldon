@@ -1,3 +1,19 @@
+        _+=+_
+      .-`  .  `-.          8888888b.  8888888b.   .d88888b.   .d8888b.
+   _+`     "     `+_       888   Y88b 888   Y88b d88P" "Y88b d88P  Y88b
+  \\\sssssssssssss///      888    888 888    888 888     888 Y88b.
+     .ss\  *  /ss.         888   d88P 888   d88P 888     888  "Y888b.
+ .+bm  .s  *  s.  md+.     8888888P"  8888888P"  888     888     "Y88b.
+.hMMMMs .  *  . sMMMMh.    888        888 T88b   888     888       "888
+ `\hMMMb \ | / dMMMh:      888        888  T88b  Y88b. .d88P Y88b  d88P
+   -SNMNo  -  oNMNs-       888        888   T88b  "Y88888P"   "Y8888P"
+     `+dMh\./dMd/
+        `:yNy:`                      Powered by PROS for VEX V5
+           "                Copyright (c) Purdue University ACM SIGBots
+Version:        4.2.1     Platform:  V1.1.5 (b18)     Uptime:    0.000 s
+Compiled:   Jan 30 2026 22:31:53     Directory:                        
+
+
 === SBOT INITIALIZE START ===
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
 Initializing LemLib for sbot...
@@ -7,9 +23,9 @@ Sbot LemLib initialization complete.
 SBOT: subsystems created; defaults applied
 
 SBOT: Initializing autonomous selector...
-SBOT AUTO: select 0 (DISABLED) [L/R to change, A to confirm]
+SBOT AUTO: select 3 (Red Left (Solo AWP)) [L/R to change, A to confirm]
 SELECTOR: Controller just connected - forcing display
-SELECTOR: Displaying selection 0 - 'DISABLED'
+SELECTOR: Displaying selection 3 - 'Red Left (Solo AWP)'
 SBOT: Selector ready - use D-pad L/R + A anytime to select/change
 SBOT: Current selection will be shown on controller screen
 
@@ -18,113 +34,79 @@ SBOT: Selector ready - use D-pad L/R + A anytime to select/change
 SBOT: Current selection will be shown on controller screen
 SBOT: development mode (no competition control). Auto select open for 10s.
 SBOT: auto select... 10s left
-SELECTOR: RIGHT button pressed
-SBOT AUTO: select 1 (Left) [L/R to change, A to confirm]
-SELECTOR: Displaying selection 1 - 'Left'
 SBOT: auto select... 9s left
-SELECTOR: RIGHT button pressed
-SBOT AUTO: select 2 (Right) [L/R to change, A to confirm]
-SELECTOR: Displaying selection 2 - 'Right'
 SBOT: auto select... 8s left
 SBOT: auto select... 7s left
-SELECTOR: RIGHT button pressed
-SBOT AUTO: select 3 (Red Left (Solo AWP)) [L/R to change, A to confirm]
-SELECTOR: Displaying selection 3 - 'Red Left (Solo AWP)'
 SBOT: auto select... 6s left
 SBOT: auto select... 5s left
-SELECTOR: A button pressed - CONFIRMING mode 3
-SBOT AUTO: READY 3 (Red Left (Solo AWP))
-SELECTOR: Displaying CONFIRMED - 'Red Left (Solo AWP)'
-SBOT: auto mode confirmed
-SBOT: DEV MODE running selected autonomous mode: 3
+SBOT: auto select... 4s left
+SBOT: auto select... 3s left
+SBOT: auto select... 2s left
+SBOT: auto select... 1s left
+SBOT: DEV MODE running autonomous mode: 3 (default)
 SBOT ELAPSED [auton_start]: 0 ms (0.00 s)
 SBOT AUTON: SOLO AWP (RED LEFT)
-SBOT BUILD TAG: Jan 29 2026 07:37:23
+SBOT BUILD TAG: Jan 30 2026 22:31:35
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT POSE [awp start]: x=0.00 y=0.00 th=0.00
+SBOT POSE [solo awp start]: x=0.00 y=0.00 th=0.00
 -46.500,13.000,120
-AUTONOMOUS: intake started at beginning
-AWP STAGE 1: cluster collect
-SBOT PNEU: batch loader EXTEND (ADI C -> 1)
-CLUSTER: loader deployed during approach
-CLUSTER: intake ON during approach
-SBOT WAIT [match.cluster.reach]: 160 ms
-SBOT POSE [after cluster]: x=-8.15 y=25.34 th=-18.13
--21.157,21.155,120
-AWP STAGE 2: CENTER LOWER (front score)
-SBOT WAIT [match.turn_to]: 710 ms
-SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-CENTER LOWER contact->pose: contact(3.30,38.20) heading=45.0 front=7.50 => pose(-2.00,32.90)
-LOW GOAL drive_to: from(-8.02,25.89,44.0) to(-2.00,32.90,45.0) d=(6.01,7.01)
-SBOT TARGET JERRY [low_goal_pose_target]: our(-2.00,32.90) => jerry(-13.603,15.003)
-SBOT WAIT [match.approach_low_goal_pose.pre_turn]: 220 ms
-SBOT WAIT TRACE [match.approach_low_goal_pose.drive] t=200ms dist=6.76 hErr=2.26 pose(-6.30,27.69,42.9) dPose=2.47 vert.in=30.15 dVert=2.93 imu.h=42.7 imu.r=42.7
-SBOT WAIT TRACE [match.approach_low_goal_pose.drive] t=400ms dist=0.84 hErr=4.69 pose(-2.33,32.13,40.5) dPose=5.96 vert.in=36.06 dVert=5.91 imu.h=40.3 imu.r=40.3
-SBOT WAIT [match.approach_low_goal_pose.drive]: 410 ms (close) endDist=0.46 endHErr=4.86 inMotion=0
-SBOT WAIT [match.approach_low_goal_pose.post_turn]: 360 ms
-LOW GOAL after turn+moveToPoint+turn: at(-1.04,33.62,43.5) err=(-0.96,-0.73) dist=1.20
-LOW GOAL contact check: expected(3.30,38.20) est(4.12,39.06) d=(-0.82,-0.86) dist=1.19 heading=43.5
-SBOT SCORE LOW: 1570 ms (requested 1450 ms, avg 1570 ms over 1 runs)
-SBOT ELAPSED [low_goal_score_done]: 5690 ms (5.69 s)
-SBOT POSE [after center lower (front)]: x=-1.12 y=33.54 th=43.43
--12.956,14.117,120
-SBOT POSE JERRY [after center lower (front)]: our(-1.12,33.54,43.43) => jerry(-12.956,14.117)
-AWP STAGE 3: retreat + face loader
-SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-RETREAT target: (-35.00, -1.50)
-SBOT WAIT TRACE [match.retreat.drive] t=200ms dist=45.98 hErr=0.86 pose(-3.04,31.55,44.2) dPose=2.77 vert.in=34.18 dVert=-3.34 imu.h=44.3 imu.r=44.3    
-SBOT WAIT TRACE [match.retreat.drive] t=400ms dist=38.14 hErr=1.35 pose(-8.53,25.96,44.7) dPose=7.84 vert.in=25.95 dVert=-8.22 imu.h=44.8 imu.r=44.8    
-SBOT WAIT TRACE [match.retreat.drive] t=600ms dist=28.32 hErr=0.34 pose(-15.41,18.95,43.0) dPose=9.83 vert.in=16.02 dVert=-9.93 imu.h=43.1 imu.r=43.1   
-SBOT WAIT TRACE [match.retreat.drive] t=800ms dist=17.88 hErr=1.32 pose(-22.67,11.45,44.8) dPose=10.44 vert.in=5.54 dVert=-10.48 imu.h=44.8 imu.r=44.8  
-SBOT WAIT TRACE [match.retreat.drive] t=1000ms dist=7.22 hErr=0.20 pose(-30.12,3.82,43.7) dPose=10.66 vert.in=-5.06 dVert=-10.60 imu.h=43.6 imu.r=43.6  
-SBOT WAIT [match.retreat.drive]: 1160 ms (close) endDist=0.86 endHErr=1.15 inMotion=0
-SBOT POSE [after retreat (pre-turn)]: x=-34.48 y=-0.82 th=42.44
--47.321,47.480,120
-SBOT POSE JERRY [after retreat (pre-turn)]: our(-34.48,-0.82,42.44) => jerry(-47.321,47.480)
-FACE LOADER turn_to: canonical=180.0 transformed=180.0 startPose.th=42.44 imu=42.29
-SBOT WAIT [match.turn_to]: 670 ms
-FACE LOADER after turn: pose.th=180.17 imu=180.35 errPose=-0.17 errImu=-0.35
-SBOT PNEU: batch loader EXTEND (ADI C -> 1)
-SBOT POSE [after retreat/turn]: x=-36.22 y=-2.48 th=178.83
--48.982,49.215,120
-SBOT SENSORS [after retreat/turn]: imu.heading=178.89 imu.rotation=178.89 vertRot.pos=-69469.00 vert.in=-12.88
-SBOT ELAPSED [STAGE 3 COMPLETE - retreat]: 8160 ms (8.16 s)
-AWP STAGE 4: loader1 pull
-TUBE contact->pose: contact(-35.00,-26.50) heading=180.0 frontEff=13.50 => pose(-35.00,-13.00)
-TUBE moveToPose: from(-36.22,-2.47,178.9) to(-35.00,-13.00,180.0) d=(1.22,-10.53)
-SBOT TARGET JERRY [tube_pose_target]: our(-35.00,-13.00) => jerry(-59.500,48.000)
-SBOT WAIT [match.approach_tube_pose]: 900 ms (timed out)
-TUBE after turn+moveToPoint+turn: at(-34.95,-10.76,180.9) err=(-0.05,-2.24)
-TUBE extra seat: +2.0in
-SBOT WAIT [drive_relative]: 800 ms
-MATCHLOADER: intake OFF, flap OPEN immediately after pull
-SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT POSE [after loader1 (relative)]: x=-34.96 y=-11.36 th=180.86
--57.857,47.955,120
-SBOT POSE JERRY [after loader1 (relative)]: our(-34.96,-11.36,180.86) => jerry(-57.857,47.955)
-SBOT ELAPSED [STAGE 4 COMPLETE - loader1]: 11510 ms (11.51 s)
 === SOLO AWP: Start ===
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SOLO STAGE 1: Turn 90° left, drive to retreat
-SBOT WAIT [match.turn_to]: 1300 ms
-SBOT WAIT [solo.to_retreat]: 1170 ms
-SBOT ELAPSED [SOLO STAGE 1 COMPLETE - retreat]: 14100 ms (14.10 s)
-SOLO STAGE 2: Turn 90° left toward loader
-SBOT WAIT [match.turn_to]: 520 ms
-SOLO STAGE 3: Drive to loader, pull
+SOLO STAGE 1: Drive to Cluster 1
+SBOT WAIT [match.turn_to]: 10 ms
 SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+CLUSTER 1: loader deployed during approach
+SBOT WAIT [solo.to_cluster1]: 540 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT ELAPSED [SOLO STAGE 1 COMPLETE - Cluster 1]: 1210 ms (1.21 s)
+SOLO STAGE 2: Turn 90° left toward loader
+SBOT WAIT [match.turn_to]: 530 ms
+SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+SOLO STAGE 3: Drive to loader, pull
 SBOT WAIT [solo.to_loader]: 2000 ms (timed out)
-SBOT WAIT [drive_relative]: 800 ms
-SBOT ELAPSED [SOLO STAGE 3 COMPLETE - loader]: 18760 ms (18.76 s)
+SBOT WAIT [drive_relative]: 370 ms
+SBOT ELAPSED [SOLO STAGE 3 COMPLETE - loader]: 5550 ms (5.55 s)
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
 SOLO STAGE 4: Back to Long Goal, score
-SBOT WAIT [solo.to_long_goal]: 1260 ms
-SBOT WAIT [drive_relative_stall_exit]: 460 ms
+SBOT WAIT [solo.to_long_goal]: 1180 ms
+SBOT WAIT [drive_relative_stall_exit]: 550 ms
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT ELAPSED [SOLO STAGE 4 COMPLETE - Long Goal]: 21800 ms (21.80 s)
+SBOT ELAPSED [SOLO STAGE 4 COMPLETE - Long Goal]: 8600 ms (8.60 s)
 SOLO STAGE 5: Turn 90° left, drive to Cluster 1
 SBOT PNEU: batch loader RETRACT (ADI C -> 0)
-SBOT WAIT [match.turn_to]: 800 ms
+SBOT WAIT [match.turn_to]: 700 ms
 SBOT PNEU: batch loader EXTEND (ADI C -> 1)
 CLUSTER 1: loader deployed during approach
 CLUSTER 1: intake ON during approach
+SBOT WAIT [solo.to_cluster1]: 1600 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT ELAPSED [SOLO STAGE 5 COMPLETE - Cluster 1]: 11550 ms (11.55 s)
+SOLO STAGE 6: Turn 45° left, drive to Center Lower, score
+SBOT WAIT [match.turn_to]: 460 ms
+SBOT WAIT [solo.to_center_lower]: 5500 ms
+SBOT ELAPSED [SOLO STAGE 6 COMPLETE - Center Lower]: 18700 ms (18.70 s)
+SOLO STAGE 7: Turn 90° right, drive to waypoint
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT WAIT [match.turn_to]: 400 ms
+SBOT WAIT [solo.to_waypoint]: 790 ms
+SBOT ELAPSED [SOLO STAGE 7 COMPLETE - waypoint]: 20110 ms (20.11 s)
+SOLO STAGE 8: Turn 45° left, drive to Cluster 2
+SBOT WAIT [match.turn_to]: 500 ms
+SBOT PNEU: batch loader EXTEND (ADI C -> 1)
+CLUSTER 2: loader deployed during approach
+SBOT WAIT [solo.to_cluster2]: 910 ms
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+SBOT ELAPSED [SOLO STAGE 8 COMPLETE - Cluster 2]: 22120 ms (22.12 s)
+SOLO STAGE 9: Turn 45° right, back to Center Middle, score
+SBOT WAIT [match.turn_to]: 480 ms
+SBOT WAIT [solo.to_center_middle]: 5500 ms
+SBOT ELAPSED [SOLO STAGE 9 COMPLETE - Center Middle]: 29290 ms (29.29 s)
+SBOT PNEU: batch loader RETRACT (ADI C -> 0)
+=== SOLO AWP COMPLETE ===
+Goals: Long, Center Lower, Center Middle
+SBOT ELAPSED [SOLO AWP TOTAL TIME]: 29290 ms (29.29 s)
+SBOT AUTON TOTAL: 29290 ms (29.29 s)
+SBOT: DEV MODE autonomous complete; entering opcontrol
+=== SBOT INITIALIZE COMPLETE ===
+=== SBOT OPCONTROL() ENTER ===
+=== SBOT DRIVER CONTROL START ===

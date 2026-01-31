@@ -249,11 +249,13 @@ void initialize() {
             pros::delay(20);
         }
 
-        // If a mode was confirmed in dev mode, run it immediately.
-        // This matches the "select then immediately test" workflow used in the old project.
-        if (mode_confirmed || (sbot_auton && sbot_auton->getSelector().isConfirmed())) {
+        // Run autonomous after timeout (confirmed or not).
+        // If nothing was selected, runs the default (Red Left).
+        if (sbot_auton) {
             const int selected = static_cast<int>(sbot_auton->getSelector().getMode());
-            printf("SBOT: DEV MODE running selected autonomous mode: %d\n", selected);
+            const bool confirmed = sbot_auton->getSelector().isConfirmed();
+            printf("SBOT: DEV MODE running autonomous mode: %d (%s)\n", 
+                   selected, confirmed ? "confirmed" : "default");
             fflush(stdout);
             pros::delay(250);
 
