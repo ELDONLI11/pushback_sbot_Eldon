@@ -490,6 +490,19 @@ void opcontrol() {
         if (sbot_master->get_digital_new_press(SBOT_GOAL_FLAP_TOGGLE_BTN)) {
             goal_flap_latched_open = !goal_flap_latched_open;
             printf("SBOT: A pressed -> goal_flap_latched_open=%d\n", goal_flap_latched_open ? 1 : 0);
+            
+            // If descorer is now extended (flap open), turn off storage mode (requires flap closed)
+            if (goal_flap_latched_open && storage_mode_active) {
+                storage_mode_active = false;
+                printf("SBOT: Descorer extended -> turning OFF storage mode\n");
+            }
+            
+            // If descorer is now retracted (flap closed), turn off top score mode (requires flap open)
+            if (!goal_flap_latched_open && top_score_active) {
+                top_score_active = false;
+                printf("SBOT: Descorer retracted -> turning OFF top score mode\n");
+            }
+            
             fflush(stdout);
         }
 

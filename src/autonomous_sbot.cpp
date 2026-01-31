@@ -1998,6 +1998,15 @@ static void sbot_run_match_auto(
             turn_to(180.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
             pros::delay(50);
             
+            // Deploy loader BEFORE driving to ensure stability
+            if (sbot_batch_loader) {
+                sbot_batch_loader->extend();
+                pros::delay(solo_loader_deploy_ms);
+            }
+            
+            // Small delay to stabilize heading after turn
+            pros::delay(100);
+            
             // SOLO Stage 3: Drive to loader and pull
             printf("SOLO STAGE 3: Drive to loader, pull\n");
             if (sbot_chassis) {
@@ -2005,11 +2014,6 @@ static void sbot_run_match_auto(
                 const SbotPoint tube_contact = sbot_apply_alliance_transform_only(t.tube1_contact, alliance_);
                 const double front_effective = SBOT_FRONT_BUMPER_IN + t.loader_down_extra_front_in;
                 const SbotPoint tube_pose_target = sbot_pose_from_front_contact(tube_contact, tube_heading, front_effective);
-                
-                if (sbot_batch_loader) {
-                    sbot_batch_loader->extend();
-                    pros::delay(solo_loader_deploy_ms);
-                }
                 
                 lemlib::MoveToPoseParams params;
                 params.forwards = true;
