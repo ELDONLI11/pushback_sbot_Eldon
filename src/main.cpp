@@ -220,10 +220,11 @@ void initialize() {
     }
     // ========================================================================
 
-    // Development-mode autonomous selection when not connected to competition control.
-    // Mirrors the official project's workflow: allow a short selection window,
-    // and (if confirmed) run the selected routine immediately.
+    // Autonomous selection window based on competition mode
     if (!pros::competition::is_connected()) {
+        // Development-mode autonomous selection when not connected to competition control.
+        // Mirrors the official project's workflow: allow a short selection window,
+        // and (if confirmed) run the selected routine immediately.
         printf("SBOT: development mode (no competition control). Auto select open for 10s.\n");
         fflush(stdout);
 
@@ -264,8 +265,34 @@ void initialize() {
             pros::delay(250);
         }
     } else {
-        printf("SBOT: competition control detected; select auto during DISABLED\n");
+        // Competition mode - provide 30 second selection window
+        printf("SBOT: competition control detected. Auto select open for 30s.\n");
         fflush(stdout);
+
+        int countdown = 1500; // 1500 * 20ms = 30 seconds
+        while (countdown > 0) {
+            if (sbot_auton) {
+                sbot_auton->updateSelector();
+            }
+
+            // Periodic heartbeat for tracking
+            if (countdown % 50 == 0) {
+                printf("SBOT: auto select... %ds left\n", countdown / 50);
+                fflush(stdout);
+            }
+
+            countdown--;
+            pros::delay(20);
+        }
+
+        // Display final selection
+        if (sbot_auton) {
+            const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
+            const bool confirmed = sbot_auton->getSelector().isConfirmed();
+            printf("SBOT: Selection window complete. Mode: %d (%s)\n",
+                   mode, confirmed ? "CONFIRMED" : "not confirmed");
+            fflush(stdout);
+        }
     }
 
     printf("=== SBOT INITIALIZE COMPLETE ===\n");
@@ -459,8 +486,11 @@ void opcontrol() {
         }
 
         // Pneumatic toggles (latched)
+        // Goal flap / descorer toggle (same physical mechanism)
         if (sbot_master->get_digital_new_press(SBOT_GOAL_FLAP_TOGGLE_BTN)) {
             goal_flap_latched_open = !goal_flap_latched_open;
+            printf("SBOT: A pressed -> goal_flap_latched_open=%d\n", goal_flap_latched_open ? 1 : 0);
+            fflush(stdout);
         }
 
         if (sbot_master->get_digital_new_press(SBOT_BATCH_LOADER_TOGGLE_BTN)) {
@@ -485,6 +515,12 @@ void opcontrol() {
             top_score_active = false;
             mid_score_active = false;
             low_score_active = false;
+            // When entering storage mode, force flap closed and sync latched state
+            if (storage_mode_active) {
+                goal_flap_latched_open = false;
+                sbot_goal_flap->close();
+                printf("SBOT: R1 ON -> forcing flap closed, latched=false\n");
+            }
             printf("SBOT: R1 toggle -> storage_mode_active=%d\n", storage_mode_active ? 1 : 0);
             fflush(stdout);
         }
@@ -495,6 +531,11 @@ void opcontrol() {
             storage_mode_active = false;
             mid_score_active = false;
             low_score_active = false;
+            // When entering top score mode, sync latched state with open position
+            if (top_score_active) {
+                goal_flap_latched_open = true;
+                printf("SBOT: R2 ON -> syncing latched=true (flap will be opened)\n");
+            }
             printf("SBOT: R2 toggle -> top_score_active=%d\n", top_score_active ? 1 : 0);
             fflush(stdout);
         }
