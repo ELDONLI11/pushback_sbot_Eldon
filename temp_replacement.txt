@@ -1,0 +1,7 @@
+Line to replace:  sbot_score_low_for(requested_ms);
+
+The only change from the pasted code is: 
+- Remove the sbot_score_low_for() call in the low_goal_case section (around line 630 of the pasted code)
+- This keeps the balls in the robot for long goal scoring
+
+User wants to use the old low goal approach code (45° front-score) but WITHOUT running intake to score.

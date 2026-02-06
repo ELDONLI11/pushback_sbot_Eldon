@@ -13,6 +13,7 @@ public:
     SbotDrivetrain();
 
     void arcadeTankControl(pros::Controller& master);
+    void splitArcadeControl(pros::Controller& master);
     void setBrakeMode(pros::v5::MotorBrake mode);
     void stop();
 

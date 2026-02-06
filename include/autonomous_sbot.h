@@ -64,6 +64,7 @@ public:
     void updateSelector();
     void run(); // call from autonomous()
     void runRight(); // Exposed for emergency fallback
+    void runLeft();  // Exposed for direct autonomous call
 
     SbotAutoSelector& getSelector() { return selector; }
 
@@ -71,7 +72,6 @@ private:
     SbotAutoSelector selector;
 
     // Simple stubs for now – can be filled with LemLib paths later
-    void runLeft();
     void runSkills();
 
     void runTestSweepToLowGoal();

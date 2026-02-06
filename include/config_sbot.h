@@ -105,7 +105,7 @@
 
 // Deadband and sensitivity for tank drive
 #define SBOT_JOYSTICK_DEADZONE     10
-#define SBOT_TANK_SENSITIVITY      1.0
+#define SBOT_TANK_SENSITIVITY      0.5
 
 // ========== RESPONSE CURVE CONTROL ==========
 // Squared curve gives fine control at low speeds but can be aggressive

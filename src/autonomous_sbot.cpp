@@ -731,11 +731,12 @@ static void sbot_intake_on_storage() {
     if (sbot_indexer) sbot_indexer->update();
 }
 
-static void sbot_score_mid_for(uint32_t ms) {
+static void sbot_score_mid_for(uint32_t ms, bool run_intake = true) {
     if (!sbot_indexer) return;
 
     // Mimic driver helper behavior: intake forward assists while indexer reverses.
-    if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
+    // For RED LEFT, we skip intake to keep balls for long goal
+    if (run_intake && sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
     sbot_indexer->setMode(IndexerMode::FEED_BACKWARD_MIDDLE);
     sbot_run_for_ms(ms);
     sbot_indexer->setMode(IndexerMode::OFF);
@@ -944,256 +945,264 @@ static void sbot_run_red_right_1_to_5(SbotAutoSide side, SbotAutoAlliance allian
     printf("SBOT AUTON: MATCH AUTO RR-1to5 complete\n");
 }
 
-// AWP Half-Field Tuning Structure
-struct SbotAwpHalfTuning {
-    // All points are defined for RED LEFT canonical frame.
-    // They are transformed for other alliances via mirror/rotation.
-    // Frame is start-relative as described in `sbot_set_match_start_pose()`.
-
-    // Stage 0: ensure we are not touching the park zone barrier
-    double clear_barrier_in;
-
-    // Stage 1: collect the nearby block cluster
-    SbotPoint cluster1;                     // Target cluster position
-    uint32_t cluster_collect_ms;            // Dwell time at cluster
-
-    // Stage 2: Center Goal scoring
-    // - (RED LEFT, BLUE RIGHT): Center Goal – Lower (front score)
-    // - (RED RIGHT, BLUE LEFT): Center Goal – Middle (back score)
-    SbotPoint low_goal_approach;            // Lower goal pose target
-    double low_goal_heading_deg;            // Lower goal heading
-    uint32_t low_goal_score_ms;             // Lower goal score duration
-    bool use_low_goal_contact;              // Use contact point conversion
-    SbotPoint low_goal_contact;             // Lower goal bumper contact point
-
-    SbotPoint mid_goal_approach;            // Middle goal pose target
-    double mid_goal_heading_deg;            // Middle goal heading
-    uint32_t mid_goal_score_ms;             // Middle goal score duration
-    bool use_mid_goal_contact;              // Use contact point conversion
-    SbotPoint mid_goal_contact;             // Middle goal bumper contact point
-
-    // Stage 3: Retreat after first score
-    bool use_post_score_retreat_point;      // Use absolute retreat point
-    SbotPoint post_score_retreat_point;     // Retreat endpoint (absolute pose)
-    SbotPoint retreat_point_adjustment;     // Fine-tune retreat for drift compensation (added to retreat point)
-    double tube_face_heading_deg;           // Heading to face loader
-
-    // Stage 4: Loader pull
-    double loader_down_extra_front_in;      // Extra loader protrusion when deployed
-    SbotPoint tube1;                        // Loader pose target (fallback)
-    uint32_t tube_pull_ms;                  // Loader pull duration
-    bool use_tube1_contact;                 // Use contact point conversion
-    SbotPoint tube1_contact;                // Loader bumper contact point
-    double tube_extra_seat_in;              // Extra distance to push into loader after contact
-
-    // Stage 5: Long Goal scoring
-    double high_goal_heading_deg;           // Long goal heading
-    uint32_t high_goal_score_ms;            // Long goal score duration
-    double high_goal_back_in_from_tube_in;  // Distance to back into goal from loader
-
-    // Solo AWP: second loader pull
-    SbotPoint tube2;                        // Second loader position (solo only)
-    SbotPoint tube2_pulloff;                // Pulloff after second load (solo only)
-
-    // Solo AWP: second cluster collection
-    SbotPoint cluster2;                     // Second cluster position (solo AWP)
-    uint32_t cluster2_collect_ms;           // Dwell time at second cluster
-    
-    // Solo AWP: second goal scoring (Center Middle from opposite side)
-    SbotPoint mid_goal_solo_approach;       // Middle goal approach for solo (from cluster 2)
-    double mid_goal_solo_heading_deg;       // Heading for solo middle goal (45° for back-score)
-    bool use_mid_goal_solo_contact;         // Use contact point for solo middle
-    SbotPoint mid_goal_solo_contact;        // Middle goal contact point (solo)
-
-    // Timeouts
-    uint32_t drive_timeout_ms;
-    uint32_t turn_timeout_ms;
-};
-
-// Tuning functions for AWP routines (accessible to both regular and solo AWP)
-static SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
-    SbotAwpHalfTuning t;
-
-    // NOTE: These are conservative first-pass guesses.
-    // Tune on a real field by logging pose prints and adjusting the points.
-    // Conventions: +Y forward into field, +X to robot-right at 0°.
-
-    // No obstacle: drive directly from start to the first cluster.
-    t.clear_barrier_in = 0.0;
-
-    // Cluster (RED LEFT) from Jerry field points.
-    // Source of truth: Jerry cluster = (-21, 21)
-    t.cluster1 = sbot_from_jerry(-21.0, 21.0);
-    t.cluster_collect_ms = 150;
-
-    // Center Goal – Lower (RED LEFT / BLUE RIGHT): from the cluster,
-    // user-measured direction is forward-right about ~0.75 tile diagonally.
-    // IMPORTANT: keep the robot on the same line from cluster -> goal for reliable scoring.
-    const double center_lower_dx = 18.0;
-    const double center_lower_dy = 18.0;
-    const SbotPoint center_lower_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
-
-    // Center Goal – Middle: separate tuning (primarily for RED RIGHT / BLUE LEFT).
-    const double center_middle_dx = 18;
-    const double center_middle_dy = 18.0;
-    const SbotPoint center_middle_approach = {t.cluster1.x - center_middle_dx, t.cluster1.y + center_middle_dy};
-
-    // Center Goal – Lower approach (front-score).
-    t.low_goal_approach = center_lower_approach;
-    t.low_goal_heading_deg = 45;
-    // Lower-goal scoring: add extra time to ensure balls fully clear.
-    t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
-    // Use a measured front-bumper contact point for the Center Goal.
-    // Moved 1 inch forward on diagonal (45°): +0.707" in both X and Y
-    // Source of truth (Jerry field coords, inches): (-8.3, 9.7)
-    t.use_low_goal_contact = true;
-    t.low_goal_contact = sbot_from_jerry(-8.3, 9.7);
-
-    // Center Goal – Middle (back-score).
-    t.mid_goal_approach = center_middle_approach;
-    t.mid_goal_heading_deg = 180;
-    t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
-    // Measured back-bumper contact point for Center Goal – Middle.
-    // Source of truth (Jerry field coords, inches): (-9, -9)
-    t.use_mid_goal_contact = true;
-    t.mid_goal_contact = sbot_from_jerry(-9.0, -9.0);
-
-    // Stage 5: Long Goal scoring
-    t.high_goal_heading_deg = 180;
-    t.high_goal_score_ms = SBOT_MIN_SCORE_TIME_MS;
-    // Back into long goal end from loader: drive to Jerry (-24, 48) then back in slightly.
-    t.high_goal_back_in_from_tube_in = 24.0;
-
-    // Force retreat to a measured absolute point (start-relative frame).
-    // This point represents the robot pose point (drivetrain rotation center / "center" used by LemLib).
-    t.use_post_score_retreat_point = true;
-    // Source of truth: Jerry retreat = (-48, 48)
-    t.post_score_retreat_point = sbot_from_jerry(-48.0, 48.0);
-    t.retreat_point_adjustment = {0.0, 0.0};  // Red Left: no adjustment needed
-
-    // After retreat, turn to face alliance wall where the loader is.
-    t.tube_face_heading_deg = 180;
-
-    // Your measured loader protrusion when deployed.
-    t.loader_down_extra_front_in = 6.0;
-
-    // Loader (tube) pose points (fallback when not using contact points).
-    t.tube1 = {-33, -11.0};
-    t.tube_pull_ms = 1500;
-
-    // Loader contact point (field feature, Jerry coords): (-73, 48).
-    // This is where the FRONT of the robot/loader should contact the match loader.
-    // Moved 2" closer to ensure full engagement.
-    t.use_tube1_contact = true;
-    t.tube1_contact = sbot_from_jerry(-73.0, 48.0);
-    t.tube_extra_seat_in = 2.0;
-
-    // Solo AWP Stage 6: Second cluster collection
-    // Source of truth: Jerry cluster 2 = (24, 24)
-    t.cluster2 = sbot_from_jerry(24.0, 24.0);
-    t.cluster2_collect_ms = 150;
-
-    // Solo AWP Stage 7: Center Middle Goal (back-score from opposite side)
-    // Source of truth: Jerry goal = (9, 9), robot pose = (15, 15) for back bumper at goal
-    t.use_mid_goal_solo_contact = true;
-    t.mid_goal_solo_contact = sbot_from_jerry(9.0, 9.0);
-    // Calculate pose target from contact point using back bumper
-    const double mid_solo_heading = 45.0;
-    t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
-    t.mid_goal_solo_heading_deg = mid_solo_heading;
-
-    // Keep old tube2 for now (unused in new solo design)
-    t.tube2 = {54, -24};
-    t.tube2_pulloff = {-18, -18};
-
-    // Timeouts: keep tight so we don't burn match time if something is slightly off.
-    // We rely on pose-close exit thresholds to end motions quickly once we're in position.
-    t.drive_timeout_ms = 5500;
-    t.turn_timeout_ms = 1300;
-
-    return t;
-}
-
-static SbotAwpHalfTuning sbot_awp_half_red_right_tuning() {
-    // Start from the same defaults as RL (timeouts, scoring times, etc).
-    auto t = sbot_awp_half_red_left_tuning();
-
-    // Replace Jerry-derived points with their mirrored Jerry counterparts.
-    // NOTE: these calls depend on sbot_jerry_start_* having been set to the RR start.
-    t.cluster1 = sbot_from_jerry(-21.0, -21.0);
-
-    // Retreat point: (-48, 48) -> (-48, -48)
-    t.use_post_score_retreat_point = true;
-    t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
-    // Red Right: compensate for rightward drift during backward retreat
-    // Robot tends to end ~0.5" too far right, so shift retreat point left
-    t.retreat_point_adjustment = {0.0, 0.0};
-
-    // Center Goal contacts mirrored.
-    if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
-    if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-6.0, -6.0);  // Center goal at (-6, -6) for Red Right
-
-    // Tube contact mirrored: (-73, 48) -> (-73, -48)
-    if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(-73.0, -48.0);
-
-    // Solo AWP: Mirror cluster2 and mid_goal_solo
-    t.cluster2 = sbot_from_jerry(24.0, -24.0);  // (24, 24) -> (24, -24)
-    if (t.use_mid_goal_solo_contact) {
-        t.mid_goal_solo_contact = sbot_from_jerry(9.0, -9.0);  // (9, 9) -> (9, -9)
-        const double mid_solo_heading = sbot_mirror_heading(45.0);  // 45° -> 135°
-        t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
-        t.mid_goal_solo_heading_deg = mid_solo_heading;
-    }
-
-    // Mirror remaining internal-only geometry across the centerline.
-    t.tube1 = sbot_mirror_point_x(t.tube1);
-    t.low_goal_approach = sbot_mirror_point_x(t.low_goal_approach);
-    t.mid_goal_approach = sbot_mirror_point_x(t.mid_goal_approach);
-    t.tube2 = sbot_mirror_point_x(t.tube2);
-    t.tube2_pulloff = sbot_mirror_point_x(t.tube2_pulloff);
-
-    // Override Stage 2: RED RIGHT should use Center Goal – Middle (back-score).
-    const double center_middle_dx = 0.0;
-    const double center_middle_dy = 13.0;
-    t.mid_goal_approach = {t.cluster1.x + center_middle_dx, t.cluster1.y + center_middle_dy};
-    // Use 225° which will be mirrored to 135° for the diagonal backwards approach
-    t.mid_goal_heading_deg = 225;
-
-    // Keep Center-Lower distinct (not used in this path).
-    const double center_lower_dx = 13.0;
-    const double center_lower_dy = 13.0;
-    t.low_goal_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
-    t.low_goal_heading_deg = 45;
-
-    // Mirror headings AFTER overrides
-    t.low_goal_heading_deg = sbot_mirror_heading(t.low_goal_heading_deg);
-    t.mid_goal_heading_deg = sbot_mirror_heading(t.mid_goal_heading_deg);
-    t.high_goal_heading_deg = sbot_mirror_heading(t.high_goal_heading_deg);
-    t.tube_face_heading_deg = sbot_mirror_heading(t.tube_face_heading_deg);
-
-    return t;
-}
-
 static void sbot_run_match_auto(
     SbotAutoSide side,
     SbotAutoAlliance alliance,
+    bool solo_awp,
     bool start_from_cluster_sweep = false,
     bool stop_after_stage2 = false,
     bool stage2_skip_pre_turn = false
 ) {
+    // Match auto is currently focused on achieving our portion of the AWP tasks.
+    // Tune the points in `sbot_awp_half_default_tuning()` on-field.
+    struct SbotAwpHalfTuning {
+        // All points are defined for RED LEFT canonical frame.
+        // They are transformed for other alliances via mirror/rotation.
+        // Frame is start-relative as described in `sbot_set_match_start_pose()`.
+
+        // Stage 0: ensure we are not touching the park zone barrier
+        double clear_barrier_in;
+
+        // Stage 1: collect the nearby block cluster
+        SbotPoint cluster1;                     // Target cluster position
+        uint32_t cluster_collect_ms;            // Dwell time at cluster
+
+        // Stage 2: Center Goal scoring
+        // - (RED LEFT, BLUE RIGHT): Center Goal – Lower (front score)
+        // - (RED RIGHT, BLUE LEFT): Center Goal – Middle (back score)
+        SbotPoint low_goal_approach;            // Lower goal pose target
+        double low_goal_heading_deg;            // Lower goal heading
+        uint32_t low_goal_score_ms;             // Lower goal score duration
+        bool use_low_goal_contact;              // Use contact point conversion
+        SbotPoint low_goal_contact;             // Lower goal bumper contact point
+
+        SbotPoint mid_goal_approach;            // Middle goal pose target
+        double mid_goal_heading_deg;            // Middle goal heading
+        uint32_t mid_goal_score_ms;             // Middle goal score duration
+        bool use_mid_goal_contact;              // Use contact point conversion
+        SbotPoint mid_goal_contact;             // Middle goal bumper contact point
+
+        // Stage 3: Retreat after first score
+        bool use_post_score_retreat_point;      // Use absolute retreat point
+        SbotPoint post_score_retreat_point;     // Retreat endpoint (absolute pose)
+        double tube_face_heading_deg;           // Heading to face loader
+
+        // Stage 4: Loader pull
+        double loader_down_extra_front_in;      // Extra loader protrusion when deployed
+        SbotPoint tube1;                        // Loader pose target (fallback)
+        uint32_t tube_pull_ms;                  // Loader pull duration
+        bool use_tube1_contact;                 // Use contact point conversion
+        SbotPoint tube1_contact;                // Loader bumper contact point
+        double tube_extra_seat_in;              // Extra distance to push into loader after contact
+
+        // Stage 5: Long Goal scoring
+        double high_goal_heading_deg;           // Long goal heading
+        uint32_t high_goal_score_ms;            // Long goal score duration
+        double high_goal_back_in_from_tube_in;  // Distance to back into goal from loader
+
+        // Solo AWP: second loader pull
+        SbotPoint tube2;                        // Second loader position (solo only)
+        SbotPoint tube2_pulloff;                // Pulloff after second load (solo only)
+
+        // Solo AWP: second cluster collection
+        SbotPoint cluster2;                     // Second cluster position (solo AWP)
+        uint32_t cluster2_collect_ms;           // Dwell time at second cluster
+        
+        // Solo AWP: second goal scoring (Center Middle from opposite side)
+        SbotPoint mid_goal_solo_approach;       // Middle goal approach for solo (from cluster 2)
+        double mid_goal_solo_heading_deg;       // Heading for solo middle goal (45° for back-score)
+        bool use_mid_goal_solo_contact;         // Use contact point for solo middle
+        SbotPoint mid_goal_solo_contact;        // Middle goal contact point (solo)
+
+        // Timeouts
+        uint32_t drive_timeout_ms;
+        uint32_t turn_timeout_ms;
+    };
+
     // Canonical tuning: RED LEFT is the source-of-truth.
-    auto sbot_run_awp_half_field = [&](SbotAutoSide side_, SbotAutoAlliance alliance_) {
+    // Other starts are derived from this (mirror/rotate) as needed.
+    auto sbot_awp_half_red_left_tuning = []() -> SbotAwpHalfTuning {
+        SbotAwpHalfTuning t;
+
+        // NOTE: These are conservative first-pass guesses.
+        // Tune on a real field by logging pose prints and adjusting the points.
+        // Conventions: +Y forward into field, +X to robot-right at 0°.
+
+        // No obstacle: drive directly from start to the first cluster.
+        t.clear_barrier_in = 0.0;
+
+        // Cluster (RED LEFT) from Jerry field points.
+        // Source of truth: Jerry cluster = (-21, 21)
+        t.cluster1 = sbot_from_jerry(-21.0, 21.0);
+        t.cluster_collect_ms = 150;
+
+        // Center Goal – Lower (RED LEFT / BLUE RIGHT): from the cluster,
+        // user-measured direction is forward-right about ~0.75 tile diagonally.
+        // IMPORTANT: keep the robot on the same line from cluster -> goal for reliable scoring.
+        const double center_lower_dx = 18.0;
+        const double center_lower_dy = 18.0;
+        const SbotPoint center_lower_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
+
+        // Center Goal – Middle: separate tuning (primarily for RED RIGHT / BLUE LEFT).
+        const double center_middle_dx = 18;
+        const double center_middle_dy = 18.0;
+        const SbotPoint center_middle_approach = {t.cluster1.x - center_middle_dx, t.cluster1.y + center_middle_dy};
+
+        // Center Goal – Lower approach (front-score).
+        t.low_goal_approach = center_lower_approach;
+        t.low_goal_heading_deg = 45;
+        // Lower-goal scoring: add extra time to ensure balls fully clear.
+        t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
+        // Use a measured front-bumper contact point for the Center Goal.
+        // Moved 1 inch forward on diagonal (45°): +0.707" in both X and Y
+        // Source of truth (Jerry field coords, inches): (-8.3, 9.7)
+        t.use_low_goal_contact = true;
+        t.low_goal_contact = sbot_from_jerry(-8.3, 9.7);
+
+        // Center Goal – Middle (back-score).
+        t.mid_goal_approach = center_middle_approach;
+        t.mid_goal_heading_deg = 180;
+        t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
+        // Measured back-bumper contact point for Center Goal – Middle.
+        // Source of truth (Jerry field coords, inches): (-9, -9)
+        t.use_mid_goal_contact = true;
+        t.mid_goal_contact = sbot_from_jerry(-9.0, -9.0);
+
+        // Stage 5: Long Goal scoring
+        t.high_goal_heading_deg = 180;
+        t.high_goal_score_ms = SBOT_MIN_SCORE_TIME_MS;
+        // Back into long goal end from loader: drive to Jerry (-24, 48) then back in slightly.
+        t.high_goal_back_in_from_tube_in = 24.0;
+
+        // Force retreat to a measured absolute point (start-relative frame).
+        // This point represents the robot pose point (drivetrain rotation center / "center" used by LemLib).
+        t.use_post_score_retreat_point = true;
+        // Source of truth: Jerry retreat = (-48, 48)
+        t.post_score_retreat_point = sbot_from_jerry(-48.0, 48.0);
+
+        // After retreat, turn to face alliance wall where the loader is.
+        t.tube_face_heading_deg = 180;
+
+        // Your measured loader protrusion when deployed.
+        t.loader_down_extra_front_in = 6.0;
+
+        // Loader (tube) pose points (fallback when not using contact points).
+        t.tube1 = {-33, -11.0};
+        t.tube_pull_ms = 100;
+
+        // Loader contact point (field feature, Jerry coords): (-73, 48).
+        // This is where the FRONT of the robot/loader should contact the match loader.
+        // Moved 2" closer to ensure full engagement.
+        t.use_tube1_contact = true;
+        t.tube1_contact = sbot_from_jerry(-73.0, 48.0);
+        t.tube_extra_seat_in = 2.0;
+
+        // Solo AWP Stage 6: Second cluster collection
+        // Source of truth: Jerry cluster 2 = (24, 24)
+        t.cluster2 = sbot_from_jerry(24.0, 24.0);
+        t.cluster2_collect_ms = 150;
+
+        // Solo AWP Stage 7: Center Middle Goal (back-score from opposite side)
+        // Source of truth: Jerry goal = (9, 9), robot pose = (15, 15) for back bumper at goal
+        t.use_mid_goal_solo_contact = true;
+        t.mid_goal_solo_contact = sbot_from_jerry(9.0, 9.0);
+        // Calculate pose target from contact point using back bumper
+        const double mid_solo_heading = 45.0;
+        t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
+        t.mid_goal_solo_heading_deg = mid_solo_heading;
+
+        // Keep old tube2 for now (unused in new solo design)
+        t.tube2 = {54, -24};
+        t.tube2_pulloff = {-18, -18};
+
+        // Timeouts: keep tight so we don't burn match time if something is slightly off.
+        // We rely on pose-close exit thresholds to end motions quickly once we're in position.
+        t.drive_timeout_ms = 5500;
+        t.turn_timeout_ms = 1300;
+
+        return t;
+    };
+
+    // Derived tuning: RED RIGHT is the Jerry-mirrored version of RED LEFT.
+    // Per your convention: mirror across the Jerry X axis => Jerry Y is multiplied by -1.
+    auto sbot_awp_half_red_right_tuning = [&]() -> SbotAwpHalfTuning {
+        // Start from the same defaults as RL (timeouts, scoring times, etc).
+        auto t = sbot_awp_half_red_left_tuning();
+
+        // Replace Jerry-derived points with their mirrored Jerry counterparts.
+        // NOTE: these calls depend on sbot_jerry_start_* having been set to the RR start.
+        t.cluster1 = sbot_from_jerry(-21.0, -21.0);
+
+        // Retreat point: (-48, 48) -> (-48, -48)
+        t.use_post_score_retreat_point = true;
+        t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
+
+        // Center Goal contacts mirrored.
+        if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
+        if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
+
+        // Tube contact mirrored: (-73, 48) -> (-73, -48)
+        if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(-73.0, -48.0);
+
+        // Solo AWP: Mirror cluster2 and mid_goal_solo
+        t.cluster2 = sbot_from_jerry(24.0, -24.0);  // (24, 24) -> (24, -24)
+        if (t.use_mid_goal_solo_contact) {
+            t.mid_goal_solo_contact = sbot_from_jerry(9.0, -9.0);  // (9, 9) -> (9, -9)
+            const double mid_solo_heading = sbot_mirror_heading(45.0);  // 45° -> 135°
+            t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
+            t.mid_goal_solo_heading_deg = mid_solo_heading;
+        }
+
+        // Mirror remaining internal-only geometry across the centerline.
+        t.tube1 = sbot_mirror_point_x(t.tube1);
+        t.low_goal_approach = sbot_mirror_point_x(t.low_goal_approach);
+        t.mid_goal_approach = sbot_mirror_point_x(t.mid_goal_approach);
+        t.tube2 = sbot_mirror_point_x(t.tube2);
+        t.tube2_pulloff = sbot_mirror_point_x(t.tube2_pulloff);
+
+        // Mirror headings.
+        t.low_goal_heading_deg = sbot_mirror_heading(t.low_goal_heading_deg);
+        t.mid_goal_heading_deg = sbot_mirror_heading(t.mid_goal_heading_deg);
+        t.high_goal_heading_deg = sbot_mirror_heading(t.high_goal_heading_deg);
+        t.tube_face_heading_deg = sbot_mirror_heading(t.tube_face_heading_deg);
+
+        // Override Stage 2: RED RIGHT should use Center Goal – Middle (back-score).
+        const double center_middle_dx = 0.0;
+        const double center_middle_dy = 13.0;
+        t.mid_goal_approach = {t.cluster1.x + center_middle_dx, t.cluster1.y + center_middle_dy};
+        t.mid_goal_heading_deg = 180;
+
+        // Keep Center-Lower distinct (not used in this path).
+        const double center_lower_dx = 13.0;
+        const double center_lower_dy = 13.0;
+        t.low_goal_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
+        t.low_goal_heading_deg = 45;
+
+        return t;
+    };
+
+    auto sbot_run_awp_half_field = [&](SbotAutoSide side_, SbotAutoAlliance alliance_, bool solo_) {
         const uint32_t auton_start_ms = pros::millis();
-        sbot_auton_elapsed_active = true;
-        sbot_auton_elapsed_start_ms = auton_start_ms;
-        printf("SBOT AUTON: AWP HALF (%s %s)\n",
+        printf("SBOT AUTON: %s (%s %s)\n",
+               solo_ ? "SOLO AWP" : "AWP HALF",
                (alliance_ == SbotAutoAlliance::RED) ? "RED" : "BLUE",
                (side_ == SbotAutoSide::RIGHT) ? "RIGHT" : "LEFT");
 
         // Ensure run logs always prove which binary is deployed.
+        printf("MARKER05\n");
+        printf("\n=== sbot_run_match_auto() ENTER ===\n");
+        printf("SBOT: side=%d alliance=%d solo=%d\n", (int)side_, (int)alliance_, solo_awp);
         printf("SBOT BUILD TAG: %s %s\n", __DATE__, __TIME__);
+        fflush(stdout);
 
-        if (!validateSbotLemLibInitialization()) return;
+        if (!validateSbotLemLibInitialization()) {
+            printf("MARKER99 ERROR: LemLib validation failed!\n");
+            fflush(stdout);
+            return;
+        }
+        printf("MARKER06\n");
+        printf("SBOT: LemLib validation passed\n");
+        fflush(stdout);
 
         // Match-auton drivetrain behavior.
         if (sbot_chassis) sbot_chassis->setBrakeMode(pros::E_MOTOR_BRAKE_BRAKE);
@@ -1270,243 +1279,6 @@ static void sbot_run_match_auto(
         printf("AUTONOMOUS: intake started at beginning\n");
 
         if (!start_from_cluster_sweep) {
-            sbot_safe_stop_mechanisms();
-            sbot_intake_on_storage();  // Start intake early
-            
-            // Solo-specific timing overrides
-            const uint32_t solo_cluster_collect_ms = 75;
-            const uint32_t solo_tube_pull_ms = 1000;
-            const uint32_t solo_loader_deploy_ms = 250;
-            const uint32_t solo_low_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 300;
-            
-            // SOLO Stage 1: Drive to and collect Cluster 1
-            printf("SOLO STAGE 1: Drive to Cluster 1\n");
-            const SbotPoint cluster1_target = sbot_apply_alliance_transform_only(t.cluster1, alliance_);
-            turn_to(0.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            if (sbot_chassis) {
-                lemlib::MoveToPointParams params;
-                params.forwards = true;
-                params.maxSpeed = 100;
-                sbot_chassis->moveToPoint(cluster1_target.x, cluster1_target.y, t.drive_timeout_ms, params);
-                
-                pros::delay(200);
-                if (sbot_batch_loader) {
-                    sbot_batch_loader->extend();
-                    printf("CLUSTER 1: loader deployed during approach\n");
-                }
-                
-                pros::delay(150);
-                sbot_intake_on_storage();
-                
-                sbot_wait_until_done_or_timed_out_timed("solo.to_cluster1", t.drive_timeout_ms);
-            }
-            sbot_run_for_ms(solo_cluster_collect_ms);
-            
-            if (sbot_batch_loader) {
-                sbot_batch_loader->retract();
-                pros::delay(100);
-            }
-            sbot_print_auton_elapsed("SOLO STAGE 1 COMPLETE - Cluster 1");
-            
-            // SOLO Stage 2: Turn toward loader
-            printf("SOLO STAGE 2: Turn 90° left toward loader\n");
-            turn_to(180.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            // Deploy loader BEFORE driving to ensure stability
-            if (sbot_batch_loader) {
-                sbot_batch_loader->extend();
-                pros::delay(solo_loader_deploy_ms);
-            }
-            
-            // Small delay to stabilize heading after turn
-            pros::delay(100);
-            
-            // SOLO Stage 3: Drive to loader and pull
-            printf("SOLO STAGE 3: Drive to loader, pull\n");
-            if (sbot_chassis) {
-                const double tube_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance_);
-                const SbotPoint tube_contact = sbot_apply_alliance_transform_only(t.tube1_contact, alliance_);
-                const double front_effective = SBOT_FRONT_BUMPER_IN + t.loader_down_extra_front_in;
-                const SbotPoint tube_pose_target = sbot_pose_from_front_contact(tube_contact, tube_heading, front_effective);
-                
-                lemlib::MoveToPoseParams params;
-                params.forwards = true;
-                params.maxSpeed = 100;
-                sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, 3000, params);
-                sbot_wait_until_done_or_timed_out_timed("solo.to_loader", 2000);
-                
-                if (t.tube_extra_seat_in > 0.0) {
-                    sbot_drive_relative(t.tube_extra_seat_in, 800, true);
-                }
-            }
-            
-            sbot_run_for_ms(solo_tube_pull_ms);
-            sbot_print_auton_elapsed("SOLO STAGE 3 COMPLETE - loader");
-            
-            if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-            if (sbot_goal_flap) sbot_goal_flap->open();
-            if (sbot_batch_loader) sbot_batch_loader->retract();
-            pros::delay(100);
-            
-            // SOLO Stage 4: Back to Long Goal, score
-            printf("SOLO STAGE 4: Back to Long Goal, score\n");
-            const SbotPoint long_goal_canonical = sbot_from_jerry(-31.0, 48.0);
-            if (sbot_chassis) {
-                const SbotPoint target = sbot_apply_alliance_transform_only(long_goal_canonical, alliance_);
-                const double target_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance_);
-                
-                lemlib::MoveToPoseParams params;
-                params.forwards = false;
-                params.maxSpeed = 90;
-                sbot_chassis->moveToPose(target.x, target.y, target_heading, t.drive_timeout_ms, params);
-                sbot_wait_until_done_or_timed_out_timed("solo.to_long_goal", t.drive_timeout_ms);
-                sbot_drive_relative_stall_exit(4.0, 1500, false, 300, 0.35, 40);
-            }
-            
-            sbot_score_top_for(1200);
-            sbot_print_auton_elapsed("SOLO STAGE 4 COMPLETE - Long Goal");
-            
-            // SOLO Stage 5: Turn left, drive to Cluster 1 area
-            printf("SOLO STAGE 5: Turn 90° left, drive to Cluster 1\n");
-            sbot_safe_stop_mechanisms();
-            pros::delay(50);
-            
-            turn_to(270.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            if (sbot_chassis) {
-                lemlib::MoveToPointParams params;
-                params.forwards = true;
-                params.maxSpeed = 100;
-                sbot_chassis->moveToPoint(cluster1_target.x, cluster1_target.y, t.drive_timeout_ms, params);
-                
-                pros::delay(200);
-                if (sbot_batch_loader) {
-                    sbot_batch_loader->extend();
-                    printf("CLUSTER 1: loader deployed during approach\n");
-                }
-                
-                pros::delay(150);
-                sbot_intake_on_storage();
-                printf("CLUSTER 1: intake ON during approach\n");
-                
-                sbot_wait_until_done_or_timed_out_timed("solo.to_cluster1", t.drive_timeout_ms);
-            }
-            sbot_run_for_ms(solo_cluster_collect_ms);
-            
-            if (sbot_batch_loader) {
-                sbot_batch_loader->retract();
-                pros::delay(100);
-            }
-            sbot_print_auton_elapsed("SOLO STAGE 5 COMPLETE - Cluster 1");
-            
-            // SOLO Stage 6: Turn, drive to Center Lower, score
-            printf("SOLO STAGE 6: Turn 45° left, drive to Center Lower, score\n");
-            turn_to(315.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            if (sbot_chassis && t.use_low_goal_contact) {
-                const double goal_heading = sbot_apply_alliance_transform_heading_only(315.0, alliance_);
-                const SbotPoint goal_contact = sbot_apply_alliance_transform_only(t.low_goal_contact, alliance_);
-                const SbotPoint goal_pose_target = sbot_pose_from_front_contact(goal_contact, goal_heading, SBOT_FRONT_BUMPER_IN);
-                
-                lemlib::MoveToPoseParams params;
-                params.forwards = true;
-                params.maxSpeed = 90;
-                sbot_chassis->moveToPose(goal_pose_target.x, goal_pose_target.y, goal_heading, t.drive_timeout_ms, params);
-                sbot_wait_until_done_or_timed_out_timed("solo.to_center_lower", t.drive_timeout_ms);
-            }
-            
-            sbot_score_low_for(solo_low_score_ms);
-            sbot_print_auton_elapsed("SOLO STAGE 6 COMPLETE - Center Lower");
-            
-            // SOLO Stage 7: Turn right, drive to waypoint
-            printf("SOLO STAGE 7: Turn 90° right, drive to waypoint\n");
-            sbot_safe_stop_mechanisms();
-            pros::delay(100);
-            
-            turn_to(225.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            sbot_intake_on_storage();
-            
-            const SbotPoint waypoint_pre_cluster2 = sbot_from_jerry(-24.0, 0.0);
-            if (sbot_chassis) {
-                const SbotPoint waypoint_target = sbot_apply_alliance_transform_only(waypoint_pre_cluster2, alliance_);
-                lemlib::MoveToPointParams params;
-                params.forwards = true;
-                params.maxSpeed = 100;
-                sbot_chassis->moveToPoint(waypoint_target.x, waypoint_target.y, t.drive_timeout_ms, params);
-                sbot_wait_until_done_or_timed_out_timed("solo.to_waypoint", t.drive_timeout_ms);
-            }
-            pros::delay(50);
-            sbot_print_auton_elapsed("SOLO STAGE 7 COMPLETE - waypoint");
-            
-            // SOLO Stage 8: Turn left, drive to Cluster 2
-            printf("SOLO STAGE 8: Turn 45° left, drive to Cluster 2\n");
-            turn_to(270.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            const SbotPoint cluster2_solo = sbot_from_jerry(-24.0, -24.0);
-            if (sbot_chassis) {
-                const SbotPoint cluster2_target = sbot_apply_alliance_transform_only(cluster2_solo, alliance_);
-                lemlib::MoveToPointParams params;
-                params.forwards = true;
-                params.maxSpeed = 90;
-                sbot_chassis->moveToPoint(cluster2_target.x, cluster2_target.y, t.drive_timeout_ms, params);
-                
-                pros::delay(200);
-                if (sbot_batch_loader) {
-                    sbot_batch_loader->extend();
-                    printf("CLUSTER 2: loader deployed during approach\n");
-                }
-                
-                pros::delay(150);
-                if (!sbot_intake || sbot_intake->getMode() != IntakeMode::COLLECT_FORWARD) {
-                    sbot_intake_on_storage();
-                    printf("CLUSTER 2: intake ON during approach\n");
-                }
-                
-                sbot_wait_until_done_or_timed_out_timed("solo.to_cluster2", t.drive_timeout_ms);
-            }
-            sbot_run_for_ms(solo_cluster_collect_ms);
-            
-            if (sbot_batch_loader) {
-                sbot_batch_loader->retract();
-                pros::delay(100);
-            }
-            sbot_print_auton_elapsed("SOLO STAGE 8 COMPLETE - Cluster 2");
-            
-            // SOLO Stage 9: Turn right, back into Center Middle, score
-            printf("SOLO STAGE 9: Turn 45° right, back to Center Middle, score\n");
-            turn_to(315.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-            pros::delay(50);
-            
-            if (sbot_chassis && t.use_mid_goal_solo_contact) {
-                const double goal_heading = sbot_apply_alliance_transform_heading_only(315.0, alliance_);
-                const SbotPoint goal_contact = sbot_apply_alliance_transform_only(t.mid_goal_solo_contact, alliance_);
-                const SbotPoint goal_pose_target = sbot_pose_from_back_contact(goal_contact, goal_heading, SBOT_BACK_BUMPER_IN);
-                
-                lemlib::MoveToPointParams params;
-                params.forwards = false;
-                params.maxSpeed = 90;
-                sbot_chassis->moveToPoint(goal_pose_target.x, goal_pose_target.y, t.drive_timeout_ms, params);
-                sbot_wait_until_done_or_timed_out_timed("solo.to_center_middle", t.drive_timeout_ms);
-            }
-            
-            sbot_score_mid_for(t.mid_goal_score_ms);
-            sbot_print_auton_elapsed("SOLO STAGE 9 COMPLETE - Center Middle");
-            
-            sbot_safe_stop_mechanisms();
-            printf("=== SOLO AWP COMPLETE ===\n");
-            printf("Goals: Long, Center Lower, Center Middle\n");
-            sbot_print_auton_elapsed("SOLO AWP TOTAL TIME");
-            return;  // Exit early - don't run regular AWP stages
-        }
-
-        if (!start_from_cluster_sweep) {
             // Stage 0: optional barrier clearance.
             if (t.clear_barrier_in > 0.0) {
                 printf("AWP STAGE 0: clear barrier\n");
@@ -1515,6 +1287,7 @@ static void sbot_run_match_auto(
             }
 
             // Stage 1: collect nearby block cluster FIRST.
+            printf("MARKER07\n");
             printf("AWP STAGE 1: cluster collect\n");
             // Desired sequence:
             // 1) start approaching cluster WITHOUT intake (prevent spinning intake from hitting balls)
@@ -1527,6 +1300,7 @@ static void sbot_run_match_auto(
             // 1) start approach to cluster WITHOUT intake running
             {
                 const SbotPoint cluster_target = sbot_apply_alliance_transform_only(t.cluster1, alliance_);
+                printf("CLUSTER: Jerry coord (-21, 21) -> target (%.2f, %.2f)\n", cluster_target.x, cluster_target.y);
                 // We'll drive all the way to cluster, but deploy loader mid-drive
                 const double cluster1_heading_deg = 0.0;
                 const double cluster_heading = sbot_apply_alliance_transform_heading_only(cluster1_heading_deg, alliance_);
@@ -1584,6 +1358,8 @@ static void sbot_run_match_auto(
         }
 
         // Stage 2: score Center Goal – Lower (front) OR Center Goal – Middle (back)
+        printf("MARKER08 low_goal_case=%d\n", low_goal_case);
+        fflush(stdout);
         if (low_goal_case) {
             printf("AWP STAGE 2: CENTER LOWER (front score)\n");
             if (stage2_skip_pre_turn) {
@@ -1765,28 +1541,15 @@ static void sbot_run_match_auto(
                 drive_to(t.low_goal_approach, true /* forwards */);
             }
 
-            // Ensure we spend at least 1s actively scoring.
-            {
-                const uint32_t requested_ms = std::max<uint32_t>(t.low_goal_score_ms, 1000);
-                const uint32_t score_start_ms = pros::millis();
-                sbot_score_low_for(requested_ms);
-                const uint32_t score_dur_ms = pros::millis() - score_start_ms;
-                sbot_low_goal_score_total_ms += score_dur_ms;
-                sbot_low_goal_score_count += 1;
-                printf(
-                    "SBOT SCORE LOW: %u ms (requested %u ms, avg %u ms over %u runs)\n",
-                    static_cast<unsigned>(score_dur_ms),
-                    static_cast<unsigned>(requested_ms),
-                    static_cast<unsigned>(sbot_low_goal_score_total_ms / sbot_low_goal_score_count),
-                    static_cast<unsigned>(sbot_low_goal_score_count)
-                );
-            }
-            sbot_print_auton_elapsed("low_goal_score_done");
+            // RED LEFT MODIFICATION: Don't score at low goal - keep balls for long goal
+            printf("RED LEFT: Skipping low goal scoring to keep balls\n");
+            sbot_print_auton_elapsed("low_goal_approach_done");
             // Reasonable wait to let the last ball clear.
             pros::delay(200);
             sbot_print_pose("after center lower (front)");
             sbot_print_jerry_pose("after center lower (front)");
         } else {
+            printf("MARKER09\n");
             printf("AWP STAGE 2: CENTER MIDDLE (back score)\n");
             turn_to(t.mid_goal_heading_deg);
 
@@ -1795,7 +1558,8 @@ static void sbot_run_match_auto(
                 sbot_batch_loader->retract();
                 pros::delay(180);
             }
-            sbot_intake_on_storage();
+            // RED LEFT: Turn OFF intake to keep balls for long goal
+            if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
             // Confirmed: we want REAR facing the goal, so we back into the scoring spot.
             {
                 const double goal_heading = sbot_apply_alliance_transform_heading_only(t.mid_goal_heading_deg, alliance_);
@@ -1818,7 +1582,6 @@ static void sbot_run_match_auto(
                 }
 
                 // Use pose pursuit so we converge x/y AND end square to the goal.
-                // This follows the same pattern as Red Left low goal approach.
                 {
                     lemlib::TurnToHeadingParams turnParams;
                     turnParams.maxSpeed = SBOT_MATCH_TURN_MAX_SPEED;
@@ -1830,7 +1593,7 @@ static void sbot_run_match_auto(
                     driveParams.minSpeed = 0;
                     driveParams.earlyExitRange = 0;
 
-                    const uint32_t goal_wait_timeout_ms = 1900;
+                    const uint32_t goal_wait_timeout_ms = t.drive_timeout_ms;
                     const uint32_t goal_motion_timeout_ms = 9000;
                     {
                         const auto pose0 = sbot_chassis->getPose();
@@ -1862,8 +1625,8 @@ static void sbot_run_match_auto(
                         turnParams,
                         driveParams,
                         goal_wait_timeout_ms,
-                        400,
-                        1.25,
+                        650,
+                        0.5,
                         6.0
                     );
                     sbot_lemlib_debug_window_end("match.approach_mid_goal_pose");
@@ -1876,7 +1639,7 @@ static void sbot_run_match_auto(
                         if (dist > 3.0) {
                             printf("MID GOAL retry: dist still %.2f in\n", dist);
                             lemlib::MoveToPointParams retryDrive = driveParams;
-                            retryDrive.maxSpeed = 90;
+                            retryDrive.maxSpeed = 85;
                             sbot_print_jerry_target("mid_goal_pose_target.retry", mid_target.x, mid_target.y);
 
                             sbot_lemlib_debug_window_begin("match.approach_mid_goal_pose.retry");
@@ -1889,9 +1652,9 @@ static void sbot_run_match_auto(
                                 5000,
                                 turnParams,
                                 retryDrive,
-                                1100,
-                                300,
-                                1.25,
+                                1800,
+                                450,
+                                0.5,
                                 6.0
                             );
                             sbot_lemlib_debug_window_end("match.approach_mid_goal_pose.retry");
@@ -1919,9 +1682,9 @@ static void sbot_run_match_auto(
                 }
             }
             // Ensure we spend at least 1s actively scoring.
-            sbot_score_mid_for(std::max<uint32_t>(t.mid_goal_score_ms, 1000));
+            // RED LEFT: Don't run intake to keep balls for long goal
+            sbot_score_mid_for(std::max<uint32_t>(t.mid_goal_score_ms, 1000), false);
             sbot_print_pose("after center middle (back)");
-            sbot_print_auton_elapsed("STAGE 2 COMPLETE - center goal");
         }
 
         if (stop_after_stage2) {
@@ -1936,10 +1699,7 @@ static void sbot_run_match_auto(
         // Retreat: either to an absolute point (preferred for RL non-solo), or straight back-out.
         if (t.use_post_score_retreat_point) {
             // Do NOT turn here. Back straight to the retreat point, then turn at the retreat.
-            SbotPoint retreat_base = t.post_score_retreat_point;
-            retreat_base.x += t.retreat_point_adjustment.x;
-            retreat_base.y += t.retreat_point_adjustment.y;
-            const SbotPoint retreat = sbot_apply_alliance_transform_only(retreat_base, alliance_);
+            const SbotPoint retreat = sbot_apply_alliance_transform_only(t.post_score_retreat_point, alliance_);
             printf("RETREAT target: (%.2f, %.2f)\n", retreat.x, retreat.y);
             if (sbot_chassis) {
                 const double retreat_heading = sbot_get_best_heading_deg();
@@ -1949,7 +1709,7 @@ static void sbot_run_match_auto(
 
                 lemlib::MoveToPointParams driveParams;
                 driveParams.forwards = false;
-                driveParams.maxSpeed = 80;  // Increased from 60 for solo AWP timing
+                driveParams.maxSpeed = 60;  // Slowed from 95 for better alignment
                 driveParams.minSpeed = 0;
                 driveParams.earlyExitRange = 0;
 
@@ -2042,7 +1802,7 @@ static void sbot_run_match_auto(
         }
 
         // Deploy the match loader AFTER the face-loader turn so the pneumatic impulse doesn't disturb heading.
-        if (sbot_batch_loader) {
+        if (low_goal_case && sbot_batch_loader) {
             sbot_batch_loader->extend();
             // Wait longer for loader to fully deploy before approaching tube.
             // The loader needs time to descend completely before we drive forward.
@@ -2052,7 +1812,6 @@ static void sbot_run_match_auto(
         pros::delay(20);
         sbot_print_pose("after retreat/turn");
         sbot_print_sensors("after retreat/turn");
-        sbot_print_auton_elapsed("STAGE 3 COMPLETE - retreat");
 
         // Stage 4: loader pull
         printf("AWP STAGE 4: loader1 pull\n");
@@ -2189,7 +1948,6 @@ static void sbot_run_match_auto(
             // No extra pulloff drive: rely on the next motion to clear cleanly.
             sbot_print_pose("after loader1 (relative)");
             sbot_print_jerry_pose("after loader1 (relative)");
-            sbot_print_auton_elapsed("STAGE 4 COMPLETE - loader1");
         } else {
             // Fallback for other starts (tube1_pulloff removed - just use tube1).
             drive_to(t.tube1, true);
@@ -2197,11 +1955,90 @@ static void sbot_run_match_auto(
             sbot_print_pose("after loader1");
         }
 
-        // Note: Solo AWP path runs at the beginning and returns early.
-        // This code only runs for regular (non-solo) AWP.
+        if (solo_) {
+            // Solo AWP Stage 6: Collect second cluster
+            printf("AWP SOLO STAGE 6: cluster 2 collect\n");
+            
+            // Drive to cluster 2 (forward motion, similar to cluster 1 approach)
+            {
+                const SbotPoint cluster2_target = sbot_apply_alliance_transform_only(t.cluster2, alliance_);
+                const double cluster2_heading_deg = 0.0;  // Face forward toward cluster
+                const double cluster2_heading = sbot_apply_alliance_transform_heading_only(cluster2_heading_deg, alliance_);
+
+                lemlib::TurnToHeadingParams turnParams;
+                turnParams.maxSpeed = SBOT_MATCH_TURN_MAX_SPEED;
+                turnParams.minSpeed = 0;
+
+                lemlib::MoveToPointParams driveParams;
+                driveParams.forwards = true;
+                driveParams.maxSpeed = 45;
+                driveParams.minSpeed = 0;
+                driveParams.earlyExitRange = 0;
+
+                // Start the motion
+                sbot_chassis->turnToHeading(cluster2_heading, t.turn_timeout_ms, turnParams);
+                sbot_chassis->waitUntilDone();
+                
+                sbot_chassis->moveToPoint(cluster2_target.x, cluster2_target.y, t.drive_timeout_ms, driveParams);
+                
+                // Deploy loader during approach (same as cluster 1)
+                pros::delay(200);
+                if (sbot_batch_loader) {
+                    sbot_batch_loader->extend();
+                    printf("CLUSTER 2: loader deployed during approach\n");
+                }
+                
+                pros::delay(150);
+                sbot_intake_on_storage();
+                printf("CLUSTER 2: intake ON during approach\n");
+                
+                sbot_wait_until_done_or_timed_out_timed("solo.cluster2.reach", t.drive_timeout_ms);
+            }
+
+            // Dwell to collect
+            sbot_run_for_ms(t.cluster2_collect_ms);
+            sbot_print_pose("after cluster 2");
+
+            // Solo AWP Stage 7: Score Center Middle Goal (back-score)
+            printf("AWP SOLO STAGE 7: CENTER MIDDLE (back score)\n");
+            
+            // Turn to 45° to face back toward middle goal
+            turn_to(t.mid_goal_solo_heading_deg);
+            
+            // Retract loader for scoring
+            if (sbot_batch_loader) {
+                sbot_batch_loader->retract();
+                pros::delay(180);
+            }
+            
+            // Back into middle goal using contact point
+            if (sbot_chassis && t.use_mid_goal_solo_contact) {
+                const double goal_heading = sbot_apply_alliance_transform_heading_only(t.mid_goal_solo_heading_deg, alliance_);
+                SbotPoint target = sbot_apply_alliance_transform_only(t.mid_goal_solo_approach, alliance_);
+                
+                printf("SOLO MID GOAL: heading=%.1f target=(%.2f,%.2f)\n", goal_heading, target.x, target.y);
+                
+                lemlib::MoveToPointParams params;
+                params.forwards = false;  // Backing in
+                params.maxSpeed = SBOT_MATCH_MAX_SPEED;
+                sbot_chassis->moveToPoint(target.x, target.y, t.drive_timeout_ms, params);
+                sbot_wait_until_done_or_timed_out_timed("solo.mid_goal.approach", t.drive_timeout_ms);
+            }
+            
+            // Score at middle goal
+            sbot_score_mid_for(t.mid_goal_score_ms);
+            sbot_print_pose("after solo center middle");
+            
+            // Done with Solo AWP
+            sbot_safe_stop_mechanisms();
+            printf("SBOT AUTON: SOLO AWP complete\n");
+            return;
+        }
 
         // Stage 5: second score
-        printf("AWP STAGE 5: LONG GOAL END (near loader)\n");
+        // Desired flow (short travel): cluster -> Center (Lower/Middle) -> loader(s) -> near end of Long Goal.
+        printf("AWP STAGE 5: second score\n");
+        printf("AWP STAGE 5: LONG GOAL END (near loader)%s\n", solo_ ? " (solo)" : "");
 
         if (low_goal_case) {
             // Red Left (and Blue Right): Back into long goal at Jerry (-31, 48).
@@ -2229,31 +2066,16 @@ static void sbot_run_match_auto(
             
             // Final push into goal with stall detection
             sbot_drive_relative_stall_exit(4.0, 1500, false /* backwards */, 300, 0.35, 40);
-        } else {
-            // Red Right (and Blue Left): Back into long goal at Jerry (-31, -48).
-            // Same pattern as Red Left but mirrored Y coordinate.
+        } else if (t.high_goal_back_in_from_tube_in > 0.0) {
+            // We just finished loader pulling while facing the loader.
+            // Backing up keeps the intake facing the loader and puts the rear into the Long Goal end.
             sbot_intake_on_storage();
-            const SbotPoint long_goal_end_canonical = sbot_from_jerry(-31.0, -48.0);
-            printf("LONG GOAL end: canonical(%.2f,%.2f) Jerry(-31.0,-48.0)\n",
-                   long_goal_end_canonical.x, long_goal_end_canonical.y);
-            
-            // Faster backwards approach to long goal
-            if (sbot_chassis) {
-                const SbotPoint target = sbot_apply_alliance_transform_only(long_goal_end_canonical, alliance_);
-                const double target_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance_);
-                lemlib::MoveToPoseParams params;
-                params.forwards = false;
-                params.maxSpeed = 90;
-                params.minSpeed = 0;
-                
-                sbot_chassis->moveToPose(target.x, target.y, target_heading, t.drive_timeout_ms, params);
-                sbot_wait_until_done_or_timed_out_timed("match.long_goal_approach", t.drive_timeout_ms);
-            } else {
-                drive_to(long_goal_end_canonical, false /* backwards */);
-            }
-            
-            // Final push into goal with stall detection
-            sbot_drive_relative_stall_exit(4.0, 1500, false /* backwards */, 300, 0.35, 40);
+            sbot_drive_relative_stall_exit(t.high_goal_back_in_from_tube_in, 4000, false /* backwards */, 300, 0.35, 80);
+        } else {
+            // Fallback: use relative drive (high_goal_approach removed).
+            turn_to(t.high_goal_heading_deg);
+            sbot_intake_on_storage();
+            sbot_drive_relative_stall_exit(24.0, 4000, false /* backwards */, 300, 0.35, 80);
         }
 
         // Score for maximum time - let autonomous end while scoring (30s ensures we're always scoring)
@@ -2268,293 +2090,14 @@ static void sbot_run_match_auto(
         sbot_print_pose("end safe (no move)");
 
         sbot_safe_stop_mechanisms();
-        printf("SBOT AUTON: AWP HALF complete\n");
+        printf("SBOT AUTON: %s complete\n", solo_ ? "SOLO AWP" : "AWP HALF");
     };
 
-    sbot_run_awp_half_field(side, alliance);
-}
-
-static void sbot_run_solo_awp(
-    SbotAutoSide side,
-    SbotAutoAlliance alliance
-) {
-    // Dedicated Solo AWP function - completely independent from regular AWP
-    const uint32_t auton_start_ms = pros::millis();
-    sbot_auton_elapsed_active = true;
-    sbot_auton_elapsed_start_ms = auton_start_ms;
-    printf("SBOT AUTON: SOLO AWP (%s %s)\n",
-           (alliance == SbotAutoAlliance::RED) ? "RED" : "BLUE",
-           (side == SbotAutoSide::RIGHT) ? "RIGHT" : "LEFT");
-
-    printf("SBOT BUILD TAG: %s %s\n", __DATE__, __TIME__);
-
-    if (!validateSbotLemLibInitialization()) return;
-
-    if (sbot_chassis) sbot_chassis->setBrakeMode(pros::E_MOTOR_BRAKE_BRAKE);
-
-    sbot_safe_stop_mechanisms();
-
-    const bool low_goal_case =
-        (alliance == SbotAutoAlliance::RED) ? (side == SbotAutoSide::LEFT) : (side == SbotAutoSide::RIGHT);
-
-    if (low_goal_case) {
-        sbot_jerry_start_x = SBOT_JERRY_START_RL_X;
-        sbot_jerry_start_y = SBOT_JERRY_START_RL_Y;
-    } else {
-        sbot_jerry_start_x = SBOT_JERRY_START_RR_X;
-        sbot_jerry_start_y = SBOT_JERRY_START_RR_Y;
-    }
-
-    const auto t = low_goal_case ? sbot_awp_half_red_left_tuning() : sbot_awp_half_red_right_tuning();
-
-    sbot_set_match_start_pose();
-    sbot_print_pose("solo awp start");
-
-    auto turn_to = [&](double heading_deg, int maxSpeed = SBOT_MATCH_TURN_MAX_SPEED, int minSpeed = 10) {
-        if (!sbot_chassis) return;
-        const double target_heading = sbot_apply_alliance_transform_heading_only(heading_deg, alliance);
-        lemlib::TurnToHeadingParams params;
-        params.maxSpeed = maxSpeed;
-        params.minSpeed = minSpeed;
-        sbot_chassis->turnToHeading(target_heading, t.turn_timeout_ms, params);
-        sbot_wait_until_done_timed("match.turn_to");
-    };
-
-    printf("=== SOLO AWP: Start ===\n");
-    sbot_safe_stop_mechanisms();
-    sbot_intake_on_storage();
-
-    const uint32_t solo_cluster_collect_ms = 75;
-    const uint32_t solo_tube_pull_ms = 1000;
-    const uint32_t solo_loader_deploy_ms = 250;
-    const uint32_t solo_low_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 300;
-
-    // SOLO Stage 1: Drive to and collect Cluster 1
-    printf("SOLO STAGE 1: Drive to Cluster 1\n");
-    const SbotPoint cluster1_target = sbot_apply_alliance_transform_only(t.cluster1, alliance);
-    turn_to(0.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    if (sbot_chassis) {
-        lemlib::MoveToPointParams params;
-        params.forwards = true;
-        params.maxSpeed = 70;
-        sbot_chassis->moveToPoint(cluster1_target.x, cluster1_target.y, t.drive_timeout_ms, params);
-
-        pros::delay(200);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            printf("CLUSTER 1: loader deployed during approach\n");
-        }
-
-        pros::delay(150);
-        sbot_intake_on_storage();
-
-        sbot_wait_until_done_or_timed_out_timed("solo.to_cluster1", t.drive_timeout_ms);
-    }
-    sbot_run_for_ms(solo_cluster_collect_ms);
-
-    if (sbot_batch_loader) {
-        sbot_batch_loader->retract();
-        pros::delay(100);
-    }
-    sbot_print_auton_elapsed("SOLO STAGE 1 COMPLETE - Cluster 1");
-
-    // SOLO Stage 2: Turn toward loader
-    printf("SOLO STAGE 2: Turn 90° left toward loader\n");
-    turn_to(180.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    if (sbot_batch_loader) {
-        sbot_batch_loader->extend();
-        pros::delay(solo_loader_deploy_ms);
-    }
-
-    pros::delay(100);
-
-    // SOLO Stage 3: Drive to loader and pull
-    printf("SOLO STAGE 3: Drive to loader, pull\n");
-    if (sbot_chassis) {
-        const double tube_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance);
-        const SbotPoint tube_contact = sbot_apply_alliance_transform_only(t.tube1_contact, alliance);
-        const double front_effective = SBOT_FRONT_BUMPER_IN + t.loader_down_extra_front_in;
-        const SbotPoint tube_pose_target = sbot_pose_from_front_contact(tube_contact, tube_heading, front_effective);
-
-        lemlib::MoveToPoseParams params;
-        params.forwards = true;
-        params.maxSpeed = 70;
-        sbot_chassis->moveToPose(tube_pose_target.x, tube_pose_target.y, tube_heading, 3000, params);
-        sbot_wait_until_done_or_timed_out_timed("solo.to_loader", 2000);
-
-        if (t.tube_extra_seat_in > 0.0) {
-            sbot_drive_relative(t.tube_extra_seat_in, 800, true);
-        }
-    }
-
-    sbot_run_for_ms(solo_tube_pull_ms);
-    sbot_print_auton_elapsed("SOLO STAGE 3 COMPLETE - loader");
-
-    if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-    if (sbot_goal_flap) sbot_goal_flap->open();
-    if (sbot_batch_loader) sbot_batch_loader->retract();
-    pros::delay(100);
-
-    // SOLO Stage 4: Back to Long Goal, score
-    printf("SOLO STAGE 4: Back to Long Goal, score\n");
-    const SbotPoint long_goal_canonical = sbot_from_jerry(-31.0, 48.0);
-    if (sbot_chassis) {
-        const SbotPoint target = sbot_apply_alliance_transform_only(long_goal_canonical, alliance);
-        const double target_heading = sbot_apply_alliance_transform_heading_only(180.0, alliance);
-
-        lemlib::MoveToPoseParams params;
-        params.forwards = false;
-        params.maxSpeed = 63;
-        sbot_chassis->moveToPose(target.x, target.y, target_heading, t.drive_timeout_ms, params);
-        sbot_wait_until_done_or_timed_out_timed("solo.to_long_goal", t.drive_timeout_ms);
-        sbot_drive_relative_stall_exit(4.0, 1500, false, 300, 0.35, 40);
-    }
-
-    sbot_score_top_for(1200);
-    sbot_print_auton_elapsed("SOLO STAGE 4 COMPLETE - Long Goal");
-
-    // SOLO Stage 5: Turn left, drive to Cluster 1 area
-    printf("SOLO STAGE 5: Turn 90° left, drive to Cluster 1\n");
-    sbot_safe_stop_mechanisms();
-    pros::delay(50);
-
-    turn_to(270.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    if (sbot_chassis) {
-        lemlib::MoveToPointParams params;
-        params.forwards = true;
-        params.maxSpeed = 70;
-        sbot_chassis->moveToPoint(cluster1_target.x, cluster1_target.y, t.drive_timeout_ms, params);
-
-        pros::delay(200);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            printf("CLUSTER 1: loader deployed during approach\n");
-        }
-
-        pros::delay(150);
-        sbot_intake_on_storage();
-        printf("CLUSTER 1: intake ON during approach\n");
-
-        sbot_wait_until_done_or_timed_out_timed("solo.to_cluster1", t.drive_timeout_ms);
-    }
-    sbot_run_for_ms(solo_cluster_collect_ms);
-
-    if (sbot_batch_loader) {
-        sbot_batch_loader->retract();
-        pros::delay(100);
-    }
-    sbot_print_auton_elapsed("SOLO STAGE 5 COMPLETE - Cluster 1");
-
-    // SOLO Stage 6: Turn, drive to Center Lower, score
-    printf("SOLO STAGE 6: Turn 45° left, drive to Center Lower, score\n");
-    turn_to(315.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    if (sbot_chassis && t.use_low_goal_contact) {
-        const double goal_heading = sbot_apply_alliance_transform_heading_only(315.0, alliance);
-        const SbotPoint goal_contact = sbot_apply_alliance_transform_only(t.low_goal_contact, alliance);
-        const SbotPoint goal_pose_target = sbot_pose_from_front_contact(goal_contact, goal_heading, SBOT_FRONT_BUMPER_IN);
-
-        lemlib::MoveToPoseParams params;
-        params.forwards = true;
-        params.maxSpeed = 63;
-        sbot_chassis->moveToPose(goal_pose_target.x, goal_pose_target.y, goal_heading, t.drive_timeout_ms, params);
-        sbot_wait_until_done_or_timed_out_timed("solo.to_center_lower", t.drive_timeout_ms);
-    }
-
-    sbot_score_low_for(solo_low_score_ms);
-    sbot_print_auton_elapsed("SOLO STAGE 6 COMPLETE - Center Lower");
-
-    // SOLO Stage 7: Turn right, drive to waypoint
-    printf("SOLO STAGE 7: Turn 90° right, drive to waypoint\n");
-    sbot_safe_stop_mechanisms();
-    pros::delay(100);
-
-    turn_to(225.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-    sbot_intake_on_storage();
-
-    const SbotPoint waypoint_pre_cluster2 = sbot_from_jerry(-24.0, 0.0);
-    if (sbot_chassis) {
-        const SbotPoint waypoint_target = sbot_apply_alliance_transform_only(waypoint_pre_cluster2, alliance);
-        lemlib::MoveToPointParams params;
-        params.forwards = true;
-        params.maxSpeed = 70;
-        sbot_chassis->moveToPoint(waypoint_target.x, waypoint_target.y, t.drive_timeout_ms, params);
-        sbot_wait_until_done_or_timed_out_timed("solo.to_waypoint", t.drive_timeout_ms);
-    }
-    pros::delay(50);
-    sbot_print_auton_elapsed("SOLO STAGE 7 COMPLETE - waypoint");
-
-    // SOLO Stage 8: Turn left, drive to Cluster 2
-    printf("SOLO STAGE 8: Turn 45° left, drive to Cluster 2\n");
-    turn_to(270.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    const SbotPoint cluster2_solo = sbot_from_jerry(-24.0, -24.0);
-    if (sbot_chassis) {
-        const SbotPoint cluster2_target = sbot_apply_alliance_transform_only(cluster2_solo, alliance);
-        lemlib::MoveToPointParams params;
-        params.forwards = true;
-        params.maxSpeed = 63;
-        sbot_chassis->moveToPoint(cluster2_target.x, cluster2_target.y, t.drive_timeout_ms, params);
-
-        pros::delay(200);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            printf("CLUSTER 2: loader deployed during approach\n");
-        }
-
-        pros::delay(150);
-        if (!sbot_intake || sbot_intake->getMode() != IntakeMode::COLLECT_FORWARD) {
-            sbot_intake_on_storage();
-            printf("CLUSTER 2: intake ON during approach\n");
-        }
-
-        sbot_wait_until_done_or_timed_out_timed("solo.to_cluster2", t.drive_timeout_ms);
-    }
-    sbot_run_for_ms(solo_cluster_collect_ms);
-
-    if (sbot_batch_loader) {
-        sbot_batch_loader->retract();
-        pros::delay(100);
-    }
-    sbot_print_auton_elapsed("SOLO STAGE 8 COMPLETE - Cluster 2");
-
-    // SOLO Stage 9: Turn right, back into Center Middle, score
-    printf("SOLO STAGE 9: Turn 45° right, back to Center Middle, score\n");
-    turn_to(315.0, SBOT_MATCH_TURN_MAX_SPEED, 10);
-    pros::delay(50);
-
-    if (sbot_chassis && t.use_mid_goal_solo_contact) {
-        const double goal_heading = sbot_apply_alliance_transform_heading_only(315.0, alliance);
-        const SbotPoint goal_contact = sbot_apply_alliance_transform_only(t.mid_goal_solo_contact, alliance);
-        const SbotPoint goal_pose_target = sbot_pose_from_back_contact(goal_contact, goal_heading, SBOT_BACK_BUMPER_IN);
-
-        lemlib::MoveToPointParams params;
-        params.forwards = false;
-        params.maxSpeed = 63;
-        sbot_chassis->moveToPoint(goal_pose_target.x, goal_pose_target.y, t.drive_timeout_ms, params);
-        sbot_wait_until_done_or_timed_out_timed("solo.to_center_middle", t.drive_timeout_ms);
-    }
-
-    sbot_score_mid_for(t.mid_goal_score_ms);
-    sbot_print_auton_elapsed("SOLO STAGE 9 COMPLETE - Center Middle");
-
-    sbot_safe_stop_mechanisms();
-    printf("=== SOLO AWP COMPLETE ===\n");
-    printf("Goals: Long, Center Lower, Center Middle\n");
-    sbot_print_auton_elapsed("SOLO AWP TOTAL TIME");
+    sbot_run_awp_half_field(side, alliance, solo_awp);
 }
 
 static void sbot_run_skills_auto() {
-    printf("SBOT AUTON: SKILLS - Continuous cycling pattern\n");
+    printf("SBOT AUTON: SKILLS (first-pass)\n");
     if (!validateSbotLemLibInitialization()) return;
 
     sbot_safe_stop_mechanisms();
@@ -2562,266 +2105,71 @@ static void sbot_run_skills_auto() {
     sbot_print_pose("skills start");
 
     const uint32_t start_ms = pros::millis();
-    const uint32_t hard_stop_ms = 55000;
-
-    // Skills timing - wait for ALL balls from tubes!
-    const uint32_t skills_cluster_collect_ms = 1800;  // Collect all 6 balls from tube
-    const uint32_t skills_tube_pull_ms = 1800;  // Collect all 6 balls from loader tube
-    const uint32_t skills_loader_deploy_ms = 250;
-    const uint32_t skills_low_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 300;
-    const uint32_t skills_mid_score_ms = SBOT_MID_GOAL_SCORE_TIME_MS;
-    const uint32_t skills_top_score_ms = 1200;
-
-    auto turn_to = [&](double heading) {
-        if (!sbot_chassis) return;
-        lemlib::TurnToHeadingParams p;
-        p.maxSpeed = SBOT_MATCH_TURN_MAX_SPEED;
-        p.minSpeed = 10;
-        sbot_chassis->turnToHeading(heading, 1300, p);
-        sbot_chassis->waitUntilDone();
-        pros::delay(50);
-    };
-
-    auto drive_to = [&](const SbotPoint& target, bool forwards) {
-        if (!sbot_chassis) return;
-        lemlib::MoveToPointParams p;
-        p.forwards = forwards;
-        p.maxSpeed = 100;
-        sbot_chassis->moveToPoint(target.x, target.y, 5500, p);
-        sbot_chassis->waitUntilDone();
-        pros::delay(50);
-    };
+    const uint32_t hard_stop_ms = 55000; // leave time buffer
 
     int cycle = 0;
-
     while (pros::millis() - start_ms < hard_stop_ms) {
         cycle++;
-        printf("SKILLS cycle %d (time: %.1fs)\n", cycle, (pros::millis() - start_ms) / 1000.0);
+        printf("SBOT SKILLS: cycle %d\n", cycle);
 
-        // ===================================================================
-        // LEFT SIDE (RED): All tubes + goals systematically
-        // ===================================================================
-        
-        // --- PHASE 1: Top-left loader tube + goal ---
-        printf("  L1: Top-left loader + goal\n");
-        if (cycle == 1) {
-            // First cycle: start from match start position, clear goal then face loader
-            sbot_intake_on_storage();
-            turn_to(90.0);  // Turn left to clear goal
-            drive_to(sbot_from_jerry(-48.0, 48.0), true);  // Drive to retreat point (>4 inches)
-            turn_to(180.0);  // Turn left again to face loader
-        } else {
-            // Subsequent cycles: coming from top-right, retreat to top-left
-            sbot_intake_on_storage();
-            turn_to(90.0);
-            drive_to(sbot_from_jerry(-48.0, 48.0), true);  // Retreat to top-left
-            turn_to(180.0);
-        }
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            pros::delay(skills_loader_deploy_ms);
-        }
-        drive_to(sbot_from_jerry(-73.0, 48.0), true);  // Top-left loader tube
-        sbot_run_for_ms(skills_tube_pull_ms);  // Collect all 6 balls
-        if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-        if (sbot_goal_flap) sbot_goal_flap->open();
-        if (sbot_batch_loader) sbot_batch_loader->retract();
-        pros::delay(100);
+        // Collect run
+        sbot_intake_on_storage();
+        sbot_drive_to({0, 36}, 3000, false);
 
-        drive_to(sbot_from_jerry(-31.0, 48.0), false);  // Left long goal top
-        sbot_score_top_for(skills_top_score_ms);
+        // Score mid
+        sbot_turn_to(90, 1500, false);
+        sbot_drive_relative(8, 1200, true);
+        sbot_score_mid_for(SBOT_MID_GOAL_SCORE_TIME_MS);
+
+        // Go "back" to start area
+        sbot_turn_to(270, 1500, false);
+        sbot_drive_to({0, 0}, 3000, false, false);
+
+        // Small top feed attempt
+        sbot_turn_to(0, 1500, false);
+        sbot_drive_relative(10, 1500, true);
+        sbot_score_top_for(750);
+
+        // Reset for next cycle
+        sbot_turn_to(180, 1500, false);
+        sbot_drive_relative(10, 1500, true);
+        sbot_turn_to(0, 1500, false);
         sbot_safe_stop_mechanisms();
 
-        // --- PHASE 2: Top-left cluster tube + center goal ---
-        printf("  L2: Top-left cluster + center\n");
-        turn_to(270.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(-21.0, 21.0), true);  // Top-left cluster tube
-        sbot_run_for_ms(skills_cluster_collect_ms);  // Collect all 6 balls
-
-        turn_to(315.0);
-        drive_to(sbot_from_jerry(-8.3, 9.7), true);  // Center lower left
-        sbot_score_low_for(skills_low_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- PHASE 3: Bottom-left cluster tube + center goal ---
-        printf("  L3: Bottom-left cluster + center\n");
-        pros::delay(100);
-        turn_to(225.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(-24.0, 0.0), true);  // Waypoint
-        
-        turn_to(270.0);
-        drive_to(sbot_from_jerry(-24.0, -24.0), true);  // Bottom-left cluster tube
-        sbot_run_for_ms(skills_cluster_collect_ms);  // Collect all 6 balls
-
-        turn_to(315.0);
-        drive_to(sbot_from_jerry(-9.0, -9.0), false);  // Center middle left
-        sbot_score_mid_for(skills_mid_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- PHASE 4: Bottom-left loader tube + goal ---
-        printf("  L4: Bottom-left loader + goal\n");
-        pros::delay(100);
-        turn_to(225.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(-48.0, -48.0), true);  // Retreat to bottom-left
-
-        turn_to(180.0);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            pros::delay(skills_loader_deploy_ms);
-        }
-        drive_to(sbot_from_jerry(-73.0, -48.0), true);  // Bottom-left loader tube
-        sbot_run_for_ms(skills_tube_pull_ms);  // Collect all 6 balls
-        if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-        if (sbot_goal_flap) sbot_goal_flap->open();
-        if (sbot_batch_loader) sbot_batch_loader->retract();
-        pros::delay(100);
-
-        drive_to(sbot_from_jerry(-31.0, -48.0), false);  // Left long goal bottom
-        sbot_score_top_for(skills_top_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // ===================================================================
-        // RIGHT SIDE (BLUE): Mirror of left side
-        // ===================================================================
-
-        // --- PHASE 5: Bottom-right loader tube + goal ---
-        printf("  R1: Bottom-right loader + goal\n");
-        turn_to(45.0);  // Face toward center to clear goal
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(-24.0, -36.0), true);  // Waypoint 1: clear left goal
-        
-        turn_to(0.0);  // Face right
-        drive_to(sbot_from_jerry(24.0, -36.0), true);  // Waypoint 2: cross field
-        
-        drive_to(sbot_from_jerry(48.0, -48.0), true);  // Retreat to bottom-right
-
-        turn_to(0.0);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            pros::delay(skills_loader_deploy_ms);
-        }
-        drive_to(sbot_from_jerry(73.0, -48.0), true);  // Bottom-right loader tube
-        sbot_run_for_ms(skills_tube_pull_ms);  // Collect all 6 balls
-        if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-        if (sbot_goal_flap) sbot_goal_flap->open();
-        if (sbot_batch_loader) sbot_batch_loader->retract();
-        pros::delay(100);
-
-        drive_to(sbot_from_jerry(31.0, -48.0), false);  // Right long goal bottom
-        sbot_score_top_for(skills_top_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- PHASE 6: Bottom-right cluster tube + center goal ---
-        printf("  R2: Bottom-right cluster + center\n");
-        turn_to(90.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(24.0, -24.0), true);  // Bottom-right cluster tube
-        sbot_run_for_ms(skills_cluster_collect_ms);  // Collect all 6 balls
-
-        turn_to(45.0);
-        drive_to(sbot_from_jerry(9.0, -9.0), false);  // Center middle right
-        sbot_score_mid_for(skills_mid_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- PHASE 7: Top-right cluster tube + center goal ---
-        printf("  R3: Top-right cluster + center\n");
-        pros::delay(100);
-        turn_to(135.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(24.0, 0.0), true);  // Waypoint
-        
-        turn_to(90.0);
-        drive_to(sbot_from_jerry(21.0, 21.0), true);  // Top-right cluster tube
-        sbot_run_for_ms(skills_cluster_collect_ms);  // Collect all 6 balls
-
-        turn_to(45.0);
-        drive_to(sbot_from_jerry(8.3, 9.7), true);  // Center lower right
-        sbot_score_low_for(skills_low_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- PHASE 8: Top-right loader tube + goal ---
-        printf("  R4: Top-right loader + goal\n");
-        turn_to(90.0);
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(48.0, 48.0), true);  // Retreat to top-right
-
-        turn_to(0.0);
-        if (sbot_batch_loader) {
-            sbot_batch_loader->extend();
-            pros::delay(skills_loader_deploy_ms);
-        }
-        drive_to(sbot_from_jerry(73.0, 48.0), true);  // Top-right loader tube
-        sbot_run_for_ms(skills_tube_pull_ms);  // Collect all 6 balls
-        if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-        if (sbot_goal_flap) sbot_goal_flap->open();
-        if (sbot_batch_loader) sbot_batch_loader->retract();
-        pros::delay(100);
-
-        drive_to(sbot_from_jerry(31.0, 48.0), false);  // Right long goal top
-        sbot_score_top_for(skills_top_score_ms);
-        sbot_safe_stop_mechanisms();
-
-        // --- Loop back to top-left for next cycle ---
-        printf("  Transitioning back to top-left...\n");
-        turn_to(135.0);  // Clear right goal
-        sbot_intake_on_storage();
-        drive_to(sbot_from_jerry(24.0, 36.0), true);  // Waypoint 1: clear goal
-        
-        turn_to(180.0);  // Face left
-        drive_to(sbot_from_jerry(-24.0, 36.0), true);  // Waypoint 2: cross field
-        
-        drive_to(sbot_from_jerry(-48.0, 48.0), true);  // Retreat to top-left
-
-        // Check time remaining
-        if (pros::millis() - start_ms > hard_stop_ms - 30000) {
-            printf("SKILLS: Not enough time for another full cycle\n");
-            break;
-        }
+        // Prevent tight looping if time is nearly up
         pros::delay(100);
     }
 
-    // Park in red zone
-    printf("SKILLS: Parking at (-48, -48)\n");
-    if (sbot_chassis) {
-        turn_to(180.0);
-        lemlib::MoveToPointParams p;
-        p.forwards = true;
-        p.maxSpeed = 100;
-        sbot_chassis->moveToPoint(sbot_from_jerry(-48.0, -48.0).x, 
-                                  sbot_from_jerry(-48.0, -48.0).y, 5000, p);
-        sbot_chassis->waitUntilDone();
-    }
-    
     sbot_safe_stop_mechanisms();
-    printf("SKILLS complete - %d cycles\n", cycle);
+    printf("SBOT AUTON: SKILLS complete\n");
 }
 
 static const char* sbot_mode_name(int idx) {
     static const char* mode_names[] = {
-        "DISABLED",              // 0
-        "Left",                  // 1 (was Red Left)
-        "Right",                 // 2 (was Red Right)
-        "Red Left (Solo AWP)",   // 3 (was 5)
-        "Blue Left (Solo AWP)",  // 4 (was 7)
-        "Blue Right (Solo AWP)", // 5 (was 8)
-        "Skills",                // 6 (was 9)
-        "Test: Sweep->Low Goal", // 7 (was 10)
-        "Test: Drive",           // 8 (was 11)
-        "Test: Turn",            // 9 (was 12)
-        "Test: Intake",          // 10 (was 13)
-        "Test: Indexer",         // 11 (was 14)
-        "Test: Drive Short",     // 12 (was 15)
-        "Test: LowGoal (custom start)", // 13 (was 16)
-        "Test: Pose Monitor (x,y,th)", // 14 (was 17)
-        "Test: Follow Path (LemLib follow)", // 15 (was 18)
-        "Test: Pose Finder (x0 line, 90deg)", // 16 (was 19)
-        "Test: Drive Forward 2in" // 17 (was 20)
+        "DISABLED",     // 0
+        "Red Left",     // 1
+        "Red Right",    // 2
+        "Blue Left",    // 3
+        "Blue Right",   // 4
+        "Red Left (Solo AWP)",   // 5
+        "Red Right (Solo AWP)",  // 6
+        "Blue Left (Solo AWP)",  // 7
+        "Blue Right (Solo AWP)", // 8
+        "Skills",                // 9
+        "Test: Sweep->Low Goal", // 10
+        "Test: Drive",           // 11
+        "Test: Turn",            // 12
+        "Test: Intake",          // 13
+        "Test: Indexer",         // 14
+        "Test: Drive Short", // 15
+        "Test: LowGoal (custom start)", // 16
+        "Test: Pose Monitor (x,y,th)", // 17
+        "Test: Follow Path (LemLib follow)", // 18
+        "Test: Pose Finder (x0 line, 90deg)", // 19
+        "Test: Drive Forward 2in" // 20
     };
 
-    if (idx < 0 || idx > 17) return "<invalid>";
+    if (idx < 0 || idx > 20) return "<invalid>";
     return mode_names[idx];
 }
 
@@ -2902,7 +2250,7 @@ void SbotAutoSelector::handleInput() {
     bool right_pressed = sbot_master->get_digital_new_press(SBOT_AUTO_NEXT_BTN);
     bool a_pressed = sbot_master->get_digital_new_press(SBOT_AUTO_CONFIRM_BTN);
 
-    const int max_index = 17; // 0..17
+    const int max_index = 20; // 0..20
 
     if (!mode_confirmed) {
         if (left_pressed) {
@@ -3034,9 +2382,9 @@ void SbotAutonomousSystem::run() {
     switch (mode) {
         case SbotAutoMode::LEFT:   runLeft();   break;
         case SbotAutoMode::RIGHT:  runRight();  break;
-        case SbotAutoMode::RED_LEFT_SOLO_AWP:   sbot_run_solo_awp(SbotAutoSide::LEFT,  SbotAutoAlliance::RED);  break;
-        case SbotAutoMode::BLUE_LEFT_SOLO_AWP:  sbot_run_solo_awp(SbotAutoSide::LEFT,  SbotAutoAlliance::BLUE); break;
-        case SbotAutoMode::BLUE_RIGHT_SOLO_AWP: sbot_run_solo_awp(SbotAutoSide::RIGHT, SbotAutoAlliance::BLUE); break;
+        case SbotAutoMode::RED_LEFT_SOLO_AWP:   sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::RED,  true); break;
+        case SbotAutoMode::BLUE_LEFT_SOLO_AWP:  sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::BLUE, true); break;
+        case SbotAutoMode::BLUE_RIGHT_SOLO_AWP: sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::BLUE, true); break;
         case SbotAutoMode::SKILLS:     runSkills();    break;
         case SbotAutoMode::TEST_SWEEP_TO_LOW_GOAL: runTestSweepToLowGoal(); break;
         case SbotAutoMode::TEST_DRIVE:   runTestDrive();   break;
@@ -3411,11 +2759,17 @@ void SbotAutonomousSystem::runTestFollowJerryPath() {
 // ---- Match autonomous stubs ----
 
 void SbotAutonomousSystem::runLeft() {
-    sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED);
+    printf("MARKER04\n");
+    printf("\n=== SbotAutonomousSystem::runLeft() CALLED ===\n");
+    printf("SBOT: Executing RED LEFT autonomous\n");
+    fflush(stdout);
+    sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED, false);
+    printf("=== SbotAutonomousSystem::runLeft() COMPLETE ===\n\n");
+    fflush(stdout);
 }
 
 void SbotAutonomousSystem::runRight() {
-    sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::RED);
+    sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::RED, false);
 }
 
 void SbotAutonomousSystem::runSkills() {
@@ -3431,6 +2785,7 @@ void SbotAutonomousSystem::runTestSweepToLowGoal() {
     sbot_run_match_auto(
         SbotAutoSide::LEFT,
         SbotAutoAlliance::RED,
+        false /* solo_awp */,
         true /* start_from_cluster_sweep */,
         true /* stop_after_stage2 */,
         true /* stage2_skip_pre_turn */

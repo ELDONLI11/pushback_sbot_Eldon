@@ -55,6 +55,7 @@ static void run_low_goal_score() {
 void initialize() {
     // Make terminal prints immediate (helps when diagnosing "no output")
     setvbuf(stdout, nullptr, _IONBF, 0);
+    printf("MARKERA0\n");
     printf("=== SBOT INITIALIZE START ===\n");
     fflush(stdout);
 
@@ -67,14 +68,27 @@ void initialize() {
     sbot_color_system = new SbotColorSensorSystem();
     sbot_auton = new SbotAutonomousSystem();
 
+    printf("MARKERA1\n");
+    fflush(stdout);
+
     // Default states
     sbot_batch_loader->retract();
     sbot_goal_flap->close();
     sbot_color_system->setAllianceColor(AllianceColor::RED); // default
     sbot_color_system->setSortingEnabled(false);
 
+    // CRITICAL: Initialize LemLib before autonomous system
+    printf("MARKERA2\n");
+    printf("SBOT: Initializing LemLib...\n");
+    fflush(stdout);
+    initializeSbotLemLib();
+    printf("MARKERA3\n");
+    printf("SBOT: LemLib initialized\n");
+    fflush(stdout);
+
     sbot_auton->initialize();
 
+    printf("MARKERA4\n");
     printf("SBOT: subsystems created; defaults applied\n");
     fflush(stdout);
 
@@ -267,34 +281,9 @@ void initialize() {
             pros::delay(250);
         }
     } else {
-        // Competition mode - provide 30 second selection window
-        printf("SBOT: competition control detected. Auto select open for 30s.\n");
+        // Competition mode - skip selection window, hardcoded RED LEFT in autonomous()
+        printf("SBOT: competition control detected. Skipping selector - will run RED LEFT.\n");
         fflush(stdout);
-
-        int countdown = 1500; // 1500 * 20ms = 30 seconds
-        while (countdown > 0) {
-            if (sbot_auton) {
-                sbot_auton->updateSelector();
-            }
-
-            // Periodic heartbeat for tracking
-            if (countdown % 50 == 0) {
-                printf("SBOT: auto select... %ds left\n", countdown / 50);
-                fflush(stdout);
-            }
-
-            countdown--;
-            pros::delay(20);
-        }
-
-        // Display final selection
-        if (sbot_auton) {
-            const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
-            const bool confirmed = sbot_auton->getSelector().isConfirmed();
-            printf("SBOT: Selection window complete. Mode: %d (%s)\n",
-                   mode, confirmed ? "CONFIRMED" : "not confirmed");
-            fflush(stdout);
-        }
     }
 
     printf("=== SBOT INITIALIZE COMPLETE ===\n");
@@ -302,6 +291,7 @@ void initialize() {
 }
 
 void disabled() {
+    printf("MARKERB1\n");
     printf("=== SBOT DISABLED() ENTER ===\n");
     printf("=== SBOT DISABLED - AUTON SELECTOR ACTIVE ===\n");
     printf("SBOT: Selector was already initialized in initialize()\n");
@@ -316,6 +306,9 @@ void disabled() {
                mode, confirmed ? "CONFIRMED" : "not confirmed");
         fflush(stdout);
     }
+    
+    printf("MARKERB2 Entering disabled loop\n");
+    fflush(stdout);
     
     // Continue updating selector while disabled (allows changes)
     int update_count = 0;
@@ -346,6 +339,8 @@ void disabled() {
     }
     
     // Show final selection
+    printf("MARKERB3 Exiting disabled loop\n");
+    fflush(stdout);
     if (sbot_auton) {
         const int mode = static_cast<int>(sbot_auton->getSelector().getMode());
         const bool confirmed = sbot_auton->getSelector().isConfirmed();
@@ -374,31 +369,25 @@ void competition_initialize() {
 }
 
 void autonomous() {
+    printf("MARKER01\n");
     printf("=== SBOT AUTONOMOUS() ENTER ===\n");
     printf("=== SBOT AUTONOMOUS START ===\n");
+    printf("SBOT: Running RED LEFT (hardcoded, selector bypassed)\n");
+    printf("SBOT: sbot_auton pointer = %p\n", (void*)sbot_auton);
     fflush(stdout);
     
     if (sbot_auton) {
-        const int mode_num = static_cast<int>(sbot_auton->getSelector().getMode());
-        const bool confirmed = sbot_auton->getSelector().isConfirmed();
-        printf("SBOT: Running autonomous mode %d (confirmed: %s)\n", 
-               mode_num, confirmed ? "YES" : "NO");
+        printf("MARKER02\n");
+        printf("SBOT: Calling runLeft()...\n");
         fflush(stdout);
-        
-        // ONLY use fallback if mode is 0 (DISABLED) AND not confirmed
-        // If they selected mode 0 intentionally, respect that choice
-        if (mode_num == 0 && !confirmed) {
-            printf("WARNING: No valid mode selected! Using EMERGENCY FALLBACK: RIGHT\n");
-            printf("WARNING: Next time, select autonomous during DISABLED period!\n");
-            fflush(stdout);
-            // Change this to your preferred safe autonomous:
-            sbot_auton->runRight();
-        } else {
-            // Run selected mode (even if mode 0 was intentionally selected)
-            sbot_auton->run();
-        }
+        // Bypass selector - always run Red Left
+        sbot_auton->runLeft();
+        printf("MARKER03\n");
+        printf("SBOT: runLeft() completed\n");
+        fflush(stdout);
     } else {
         printf("ERROR: sbot_auton not initialized\n");
+        fflush(stdout);
     }
     
     printf("=== SBOT AUTONOMOUS COMPLETE ===\n");
@@ -473,8 +462,8 @@ void opcontrol() {
             printf("SBOT: opcontrol alive (%lu ms)\n", static_cast<unsigned long>(now));
         }
 
-        // Drivetrain tank control
-        sbot_drive->arcadeTankControl(*sbot_master);
+        // Drivetrain split arcade control (left stick forward/back, right stick turn)
+        sbot_drive->splitArcadeControl(*sbot_master);
 
         // Alliance color and sorting toggles
         if (sbot_master->get_digital_new_press(SBOT_SET_RED_ALLIANCE_BTN)) {

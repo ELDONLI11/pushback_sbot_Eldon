@@ -117,6 +117,50 @@ void SbotDrivetrain::arcadeTankControl(pros::Controller& master) {
     right_back.move(right_input);
 }
 
+void SbotDrivetrain::splitArcadeControl(pros::Controller& master) {
+    int forward = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+    int turn = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+
+    // Step 1: Apply deadzone
+    forward = applyDeadzone(forward);
+    turn = applyDeadzone(turn);
+
+    // Step 2: Apply squared curve
+    forward = applyCurve(forward);
+    turn = applyCurve(turn);
+
+    // Step 3: Calculate left and right powers
+    int left_power = forward + turn;
+    int right_power = forward - turn;
+
+    // Step 4: Scale by sensitivity
+    left_power = static_cast<int>(left_power * SBOT_TANK_SENSITIVITY);
+    right_power = static_cast<int>(right_power * SBOT_TANK_SENSITIVITY);
+
+    // Step 5: Clamp to valid range
+    if (left_power > 127) left_power = 127;
+    if (left_power < -127) left_power = -127;
+    if (right_power > 127) right_power = 127;
+    if (right_power < -127) right_power = -127;
+
+    // Step 6: Apply slew rate limiting
+    left_power = applySlewRate(prev_left_cmd, left_power, 0);
+    right_power = applySlewRate(prev_right_cmd, right_power, 0);
+
+    // Store for next iteration
+    prev_left_cmd = left_power;
+    prev_right_cmd = right_power;
+
+    // Send commands to motors
+    left_front.move(left_power);
+    left_middle.move(left_power);
+    left_back.move(left_power);
+
+    right_front.move(right_power);
+    right_middle.move(right_power);
+    right_back.move(right_power);
+}
+
 void SbotDrivetrain::setBrakeMode(pros::v5::MotorBrake mode) {
     left_front.set_brake_mode(mode);
     left_middle.set_brake_mode(mode);
