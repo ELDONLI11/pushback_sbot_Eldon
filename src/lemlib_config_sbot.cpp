@@ -120,13 +120,31 @@ void initializeSbotLemLib() {
               // Higher = faster turns but more tipping. 0 = unlimited. Try 30-60.
     );
 
+    // -------------------------- Input Curves -------------------------
+
+    // Throttle curve: expo gain for fine control at low speeds
+    lemlib::ExpoDriveCurve* throttle_curve = new lemlib::ExpoDriveCurve(
+        10,    // joystick deadband (matches SBOT_JOYSTICK_DEADZONE)
+        15,    // minimum output (prevents motor creeping)
+        1.019  // expo gain (standard, good balance)
+    );
+
+    // Steer curve: slightly less aggressive for precise turns
+    lemlib::ExpoDriveCurve* steer_curve = new lemlib::ExpoDriveCurve(
+        10,    // joystick deadband
+        10,    // minimum output (lower for steering sensitivity)
+        1.019  // expo gain
+    );
+
     // ---------------------------- Chassis ----------------------------
 
     sbot_chassis = new lemlib::Chassis(
         *sbot_drivetrain,
         *sbot_linear_controller,
         *sbot_angular_controller,
-        *sbot_odom_sensors
+        *sbot_odom_sensors,
+        throttle_curve,
+        steer_curve
     );
 
     printf("Calibrating sbot chassis (IMU/odometry)...\n");
@@ -138,14 +156,4 @@ void initializeSbotLemLib() {
 
 bool isSbotLemLibInitialized() {
     return sbot_lemlib_initialized;
-}
-
-bool validateSbotLemLibInitialization() {
-    return sbot_lemlib_initialized &&
-           sbot_left_motors && sbot_right_motors &&
-           sbot_drivetrain &&
-           sbot_inertial_sensor && sbot_vertical_encoder &&
-           sbot_vertical_tracking_wheel &&
-           sbot_linear_controller && sbot_angular_controller &&
-           sbot_odom_sensors && sbot_chassis;
 }
