@@ -27,6 +27,26 @@ int SbotDrivetrain::applyDeadzone(int value) const {
     return value;
 }
 
+int SbotDrivetrain::applyCurve(int value) const {
+#if SBOT_USE_SQUARED_CURVE
+    if (value == 0) return 0;
+    
+    // Normalized input (-1.0 to 1.0)
+    double normalized = value / 127.0;
+    
+    // Preserve sign, apply squared curve
+    double squared = normalized * std::abs(normalized);
+    
+    // Scale by curve_scaling: 1.0 = full squared, 0.0 = linear
+    double output = normalized + SBOT_CURVE_SCALING * (squared - normalized);
+    
+    // Convert back to motor command (-127 to 127)
+    return static_cast<int>(output * 127);
+#else
+    return value;  // Linear response
+#endif
+}
+
 int SbotDrivetrain::applySlewRate(int current, int target, int max_change) const {
     int delta = target - current;
     
@@ -115,6 +135,47 @@ void SbotDrivetrain::splitArcadeControl(pros::Controller& master) {
     right_front.move(right_power);
     right_middle.move(right_power);
     right_back.move(right_power);
+}
+
+void SbotDrivetrain::tankControl(pros::Controller& master) {
+    // Get joystick inputs for pure tank drive
+    int left = master.get_analog(SBOT_TANK_LEFT_STICK);
+    int right = master.get_analog(SBOT_TANK_RIGHT_STICK);
+
+    // Step 1: Apply deadzone
+    left = applyDeadzone(left);
+    right = applyDeadzone(right);
+
+    // Step 2: Apply squared curve
+    left = applyCurve(left);
+    right = applyCurve(right);
+
+    // Step 3: Scale by sensitivity
+    left = static_cast<int>(left * SBOT_TANK_SENSITIVITY);
+    right = static_cast<int>(right * SBOT_TANK_SENSITIVITY);
+
+    // Step 4: Clamp to valid range
+    if (left > 127) left = 127;
+    if (left < -127) left = -127;
+    if (right > 127) right = 127;
+    if (right < -127) right = -127;
+
+    // Step 5: Apply slew rate limiting
+    left = applySlewRate(prev_left_cmd, left, 0);
+    right = applySlewRate(prev_right_cmd, right, 0);
+
+    // Store for next iteration
+    prev_left_cmd = left;
+    prev_right_cmd = right;
+
+    // Send commands to motors
+    left_front.move(left);
+    left_middle.move(left);
+    left_back.move(left);
+
+    right_front.move(right);
+    right_middle.move(right);
+    right_back.move(right);
 }
 
 void SbotDrivetrain::setBrakeMode(pros::v5::MotorBrake mode) {
