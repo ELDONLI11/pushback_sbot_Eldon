@@ -85,6 +85,9 @@
 #define SBOT_MID_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_L1   // Timed middle goal drop
 #define SBOT_LOW_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_L2   // Timed low goal spit out
 
+// Reverse intake button (action button on top of joystick)
+#define SBOT_REVERSE_INTAKE_BTN    pros::E_CONTROLLER_DIGITAL_X    // Manual reverse intake
+
 // Color sorting and alliance color selection
 #define SBOT_COLOR_SORT_TOGGLE_BTN pros::E_CONTROLLER_DIGITAL_Y    // Enable/disable auto rejection
 #define SBOT_SET_RED_ALLIANCE_BTN  pros::E_CONTROLLER_DIGITAL_UP
