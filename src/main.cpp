@@ -12,6 +12,7 @@
 #include "pneumatics.h"
 #include "color_sensor_system.h"
 #include "autonomous_sbot.h"
+#include "robodash_selector.h"
 #include "lemlib_config_sbot.h"
 
 // Global subsystem pointers
@@ -372,24 +373,12 @@ void autonomous() {
     printf("MARKER01\n");
     printf("=== SBOT AUTONOMOUS() ENTER ===\n");
     printf("=== SBOT AUTONOMOUS START ===\n");
-    printf("SBOT: Running RED LEFT (hardcoded, selector bypassed)\n");
-    printf("SBOT: sbot_auton pointer = %p\n", (void*)sbot_auton);
+    printf("SBOT: Running RoboDash selector\n");
+    printf("SBOT: selector.run_auton()\n");
     fflush(stdout);
-    
-    if (sbot_auton) {
-        printf("MARKER02\n");
-        printf("SBOT: Calling runLeft()...\n");
-        fflush(stdout);
-        // Bypass selector - always run Red Left
-        sbot_auton->runLeft();
-        printf("MARKER03\n");
-        printf("SBOT: runLeft() completed\n");
-        fflush(stdout);
-    } else {
-        printf("ERROR: sbot_auton not initialized\n");
-        fflush(stdout);
-    }
-    
+
+    selector.run_auton();
+
     printf("=== SBOT AUTONOMOUS COMPLETE ===\n");
     fflush(stdout);
 }

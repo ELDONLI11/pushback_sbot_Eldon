@@ -1,75 +1,90 @@
 /**
- * autonomous_sbot.cpp - Autonomous selector and stub routines for sbot.
+ * autonomous_sbot.cpp - Autonomous system dispatch for sbot.
  */
 
+
 #include "autonomous_sbot.h"
+
+#include "autonomous_infrastructure.h"
+#include "autonomous_match_awp.h"
+#include "autonomous_skills.h"
 #include "lemlib_config_sbot.h"
+#include "robodash_selector.h"
 
-#include "intake.h"
-#include "indexer.h"
-#include "pneumatics.h"
-
-#include <algorithm>
-#include <cmath>
-#include <cstddef>
 #include <cstdio>
-#include <cstring>
 
-// Global controller from main.cpp
-extern pros::Controller* sbot_master;
+SbotAutonomousSystem::SbotAutonomousSystem() {}
 
-// Track controller connection state for late connection detection
-static bool controller_was_connected = false;
+void SbotAutonomousSystem::initialize() {
+    // Initialize LemLib for sbot (safe to call once)
+    initializeSbotLemLib();
+    sbot_robodash_init();
+}
 
-// LemLib path-follow assets must be declared at global scope.
-ASSET(sbot_awp_half_path_txt);
-ASSET(low_txt);
+void SbotAutonomousSystem::updateSelector() {
+    selector.update();
+}
 
-// Robot geometry (distance from LemLib pose point to bumpers, in inches)
-// Pose point is the drivetrain rotation center. Measured: 7.5" to both bumpers.
-// These are used to convert field "contact points" (where a bumper should be) into pose targets.
-static constexpr double SBOT_FRONT_BUMPER_IN = 7.5;
-static constexpr double SBOT_BACK_BUMPER_IN = 7.5;
+void SbotAutonomousSystem::run() {
+    SbotAutoMode mode = selector.getMode();
 
-// Jerry coordinate conversion config.
-// Jerry coords are absolute field inches. Our internal coords are start-relative:
-// - +Y is into-field from the robot start, +X is robot-right at start
-// - our 0° faces +Y
-// IMPORTANT: We define the Jerry "start" as the LemLib pose point (drivetrain rotation center).
-// Set the values below to whatever absolute Jerry coordinate you are using as match start.
+    const bool should_time = (mode != SbotAutoMode::DISABLED);
+    const uint32_t auton_total_start_ms = should_time ? pros::millis() : 0;
+    if (should_time) {
+        sbot_auton_elapsed_active = true;
+        sbot_auton_elapsed_start_ms = auton_total_start_ms;
+        sbot_print_auton_elapsed("auton_start");
+    }
 
-// Canonical Jerry starts (pose-point reference).
-// Red Right is mirrored across the Jerry X axis (Jerry Y is multiplied by -1).
-static constexpr double SBOT_JERRY_START_RL_X_BASE = -46.5;
-static constexpr double SBOT_JERRY_START_RL_Y_BASE = 13;
+    switch (mode) {
+        case SbotAutoMode::LEFT:   runLeft();   break;
+        case SbotAutoMode::RIGHT:  runRight();  break;
+        case SbotAutoMode::RED_LEFT_SOLO_AWP:   sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::RED,  true); break;
+        case SbotAutoMode::BLUE_LEFT_SOLO_AWP:  sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::BLUE, true); break;
+        case SbotAutoMode::BLUE_RIGHT_SOLO_AWP: sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::BLUE, true); break;
+        case SbotAutoMode::SKILLS:     runSkills();    break;
+        case SbotAutoMode::TEST_SWEEP_TO_LOW_GOAL: runTestSweepToLowGoal(); break;
+        case SbotAutoMode::TEST_DRIVE:   runTestDrive();   break;
+        case SbotAutoMode::TEST_DRIVE_SHORT: runTestDriveShort(); break;
+        case SbotAutoMode::TEST_LOW_GOAL_CUSTOM_START: runTestLowGoalCustomStart(); break;
+        case SbotAutoMode::TEST_JERRY_POSE_MONITOR: runTestJerryPoseMonitor(); break;
+        case SbotAutoMode::TEST_FOLLOW_JERRY_PATH: runTestFollowJerryPath(); break;
+        case SbotAutoMode::TEST_POSE_FINDER_X0_LINE_90: runTestPoseFinderX0Line90(); break;
+        case SbotAutoMode::TEST_TURN:    runTestTurn();    break;
+        case SbotAutoMode::TEST_INTAKE:  runTestIntake();  break;
+        case SbotAutoMode::TEST_INDEXER: runTestIndexer(); break;
+        case SbotAutoMode::DISABLED:
+        default:
+            // Do nothing
+            break;
+    }
 
-// Fine adjustments (inches) for on-field calibration.
-// If the robot is consistently ending too far RIGHT (+X in our frame), DECREASE the Y fine adjust.
-// (because ourX = jerry_start_y - jerry_y)
-static constexpr double SBOT_JERRY_START_RL_X_FINE_ADJUST = 0.0;
-static constexpr double SBOT_JERRY_START_RL_Y_FINE_ADJUST = 0.0;
+    if (should_time) {
+        const uint32_t dur_ms = pros::millis() - auton_total_start_ms;
+        printf("SBOT AUTON TOTAL: %u ms (%.2f s)\n", static_cast<unsigned>(dur_ms), dur_ms / 1000.0);
+        sbot_auton_elapsed_active = false;
+    }
+}
 
-static constexpr double SBOT_JERRY_START_RL_X = SBOT_JERRY_START_RL_X_BASE + SBOT_JERRY_START_RL_X_FINE_ADJUST;
-static constexpr double SBOT_JERRY_START_RL_Y = SBOT_JERRY_START_RL_Y_BASE + SBOT_JERRY_START_RL_Y_FINE_ADJUST;
-static constexpr double SBOT_JERRY_START_RR_X = SBOT_JERRY_START_RL_X;
-static constexpr double SBOT_JERRY_START_RR_Y = -SBOT_JERRY_START_RL_Y;
+void SbotAutonomousSystem::runLeft() {
+    printf("MARKER04\n");
+    printf("\n=== SbotAutonomousSystem::runLeft() CALLED ===\n");
+    printf("SBOT: Executing RED LEFT autonomous\n");
+    fflush(stdout);
+    sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED, false);
+    printf("=== SbotAutonomousSystem::runLeft() COMPLETE ===\n\n");
+    fflush(stdout);
+}
 
-// Active Jerry start used for conversions + logging during the current run.
-static double sbot_jerry_start_x = SBOT_JERRY_START_RL_X;
-static double sbot_jerry_start_y = SBOT_JERRY_START_RL_Y;
+void SbotAutonomousSystem::runRight() {
+    sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::RED, false);
+}
 
-static constexpr bool SBOT_DUMP_JERRY_POINTS = true;
+void SbotAutonomousSystem::runSkills() {
+    sbot_run_skills_auto();
+}
 
-// Debug: during pose waits, periodically print pose + sensor deltas to help
-// distinguish “robot not moving” vs “robot moving but odom not updating”.
-static constexpr bool SBOT_TRACE_POSE_WAIT_PROGRESS = true;
-static constexpr uint32_t SBOT_TRACE_POSE_WAIT_PERIOD_MS = 200;
-
-static constexpr lemlib::Level SBOT_LEMLIB_NORMAL_LEVEL = lemlib::Level::WARN;
-
-static void sbot_lemlib_debug_window_begin(const char* /*label*/) {}
-static void sbot_lemlib_debug_window_end(const char* /*label*/) {}
-
+#if 0  // Legacy content retained from previous split
 static void sbot_dump_jerry_point() {
     if (!SBOT_DUMP_JERRY_POINTS) return;
     if (!sbot_chassis) return;
@@ -954,233 +969,6 @@ static void sbot_run_match_auto(
     bool stage2_skip_pre_turn = false
 ) {
     // Match auto is currently focused on achieving our portion of the AWP tasks.
-    // Tune the points in `sbot_awp_half_default_tuning()` on-field.
-    struct SbotAwpHalfTuning {
-        // All points are defined for RED LEFT canonical frame.
-        // They are transformed for other alliances via mirror/rotation.
-        // Frame is start-relative as described in `sbot_set_match_start_pose()`.
-
-        // Stage 0: ensure we are not touching the park zone barrier
-        double clear_barrier_in;
-
-        // Stage 1: collect the nearby block cluster
-        SbotPoint cluster1;                     // Target cluster position
-        uint32_t cluster_collect_ms;            // Dwell time at cluster
-
-        // Stage 2: Center Goal scoring
-        // - (RED LEFT, BLUE RIGHT): Center Goal – Lower (front score)
-        // - (RED RIGHT, BLUE LEFT): Center Goal – Middle (back score)
-        SbotPoint low_goal_approach;            // Lower goal pose target
-        double low_goal_heading_deg;            // Lower goal heading
-        uint32_t low_goal_score_ms;             // Lower goal score duration
-        bool use_low_goal_contact;              // Use contact point conversion
-        SbotPoint low_goal_contact;             // Lower goal bumper contact point
-
-        SbotPoint mid_goal_approach;            // Middle goal pose target
-        double mid_goal_heading_deg;            // Middle goal heading
-        uint32_t mid_goal_score_ms;             // Middle goal score duration
-        bool use_mid_goal_contact;              // Use contact point conversion
-        SbotPoint mid_goal_contact;             // Middle goal bumper contact point
-
-        // Stage 3: Retreat after first score
-        bool use_post_score_retreat_point;      // Use absolute retreat point
-        SbotPoint post_score_retreat_point;     // Retreat endpoint (absolute pose)
-        double tube_face_heading_deg;           // Heading to face loader
-
-        // Stage 4: Loader pull
-        double loader_down_extra_front_in;      // Extra loader protrusion when deployed
-        SbotPoint tube1;                        // Loader pose target (fallback)
-        uint32_t tube_pull_ms;                  // Loader pull duration
-        bool use_tube1_contact;                 // Use contact point conversion
-        SbotPoint tube1_contact;                // Loader bumper contact point
-        double tube_extra_seat_in;              // Extra distance to push into loader after contact
-
-        // Stage 5: Long Goal scoring
-        double high_goal_heading_deg;           // Long goal heading
-        uint32_t high_goal_score_ms;            // Long goal score duration
-        double high_goal_back_in_from_tube_in;  // Distance to back into goal from loader
-
-        // Solo AWP: second loader pull
-        SbotPoint tube2;                        // Second loader position (solo only)
-        SbotPoint tube2_pulloff;                // Pulloff after second load (solo only)
-
-        // Solo AWP: second cluster collection
-        SbotPoint cluster2;                     // Second cluster position (solo AWP)
-        uint32_t cluster2_collect_ms;           // Dwell time at second cluster
-        
-        // Solo AWP: second goal scoring (Center Middle from opposite side)
-        SbotPoint mid_goal_solo_approach;       // Middle goal approach for solo (from cluster 2)
-        double mid_goal_solo_heading_deg;       // Heading for solo middle goal (45° for back-score)
-        bool use_mid_goal_solo_contact;         // Use contact point for solo middle
-        SbotPoint mid_goal_solo_contact;        // Middle goal contact point (solo)
-
-        // Timeouts
-        uint32_t drive_timeout_ms;
-        uint32_t turn_timeout_ms;
-    };
-
-    // Canonical tuning: RED LEFT is the source-of-truth.
-    // Other starts are derived from this (mirror/rotate) as needed.
-    auto sbot_awp_half_red_left_tuning = []() -> SbotAwpHalfTuning {
-        SbotAwpHalfTuning t;
-
-        // NOTE: These are conservative first-pass guesses.
-        // Tune on a real field by logging pose prints and adjusting the points.
-        // Conventions: +Y forward into field, +X to robot-right at 0°.
-
-        // No obstacle: drive directly from start to the first cluster.
-        t.clear_barrier_in = 0.0;
-
-        // Cluster (RED LEFT) from Jerry field points.
-        // Source of truth: Jerry cluster = (-21, 21)
-        t.cluster1 = sbot_from_jerry(-21.0, 21.0);
-        t.cluster_collect_ms = 150;
-
-        // Center Goal – Lower (RED LEFT / BLUE RIGHT): from the cluster,
-        // user-measured direction is forward-right about ~0.75 tile diagonally.
-        // IMPORTANT: keep the robot on the same line from cluster -> goal for reliable scoring.
-        const double center_lower_dx = 18.0;
-        const double center_lower_dy = 18.0;
-        const SbotPoint center_lower_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
-
-        // Center Goal – Middle: separate tuning (primarily for RED RIGHT / BLUE LEFT).
-        const double center_middle_dx = 18;
-        const double center_middle_dy = 18.0;
-        const SbotPoint center_middle_approach = {t.cluster1.x - center_middle_dx, t.cluster1.y + center_middle_dy};
-
-        // Center Goal – Lower approach (front-score).
-        t.low_goal_approach = center_lower_approach;
-        t.low_goal_heading_deg = 45;
-        // Lower-goal scoring: add extra time to ensure balls fully clear.
-        t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
-        // Use a measured front-bumper contact point for the Center Goal.
-        // Moved 1 inch forward on diagonal (45°): +0.707" in both X and Y
-        // Source of truth (Jerry field coords, inches): (-8.3, 9.7)
-        t.use_low_goal_contact = true;
-        t.low_goal_contact = sbot_from_jerry(-8.3, 9.7);
-
-        // Center Goal – Middle (back-score).
-        t.mid_goal_approach = center_middle_approach;
-        t.mid_goal_heading_deg = 180;
-        t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
-        // Measured back-bumper contact point for Center Goal – Middle.
-        // Source of truth (Jerry field coords, inches): (-9, -9)
-        t.use_mid_goal_contact = true;
-        t.mid_goal_contact = sbot_from_jerry(-9.0, -9.0);
-
-        // Stage 5: Long Goal scoring
-        t.high_goal_heading_deg = 180;
-        t.high_goal_score_ms = SBOT_MIN_SCORE_TIME_MS;
-        // Back into long goal end from loader: drive to Jerry (-24, 48) then back in slightly.
-        t.high_goal_back_in_from_tube_in = 24.0;
-
-        // Force retreat to a measured absolute point (start-relative frame).
-        // This point represents the robot pose point (drivetrain rotation center / "center" used by LemLib).
-        t.use_post_score_retreat_point = true;
-        // Source of truth: Jerry retreat = (-48, 48)
-        t.post_score_retreat_point = sbot_from_jerry(-48.0, 48.0);
-
-        // After retreat, turn to face alliance wall where the loader is.
-        t.tube_face_heading_deg = 180;
-
-        // Your measured loader protrusion when deployed.
-        t.loader_down_extra_front_in = 6.0;
-
-        // Loader (tube) pose points (fallback when not using contact points).
-        t.tube1 = {-33, -11.0};
-        t.tube_pull_ms = 100;
-
-        // Loader contact point (field feature, Jerry coords): (-73, 48).
-        // This is where the FRONT of the robot/loader should contact the match loader.
-        // Moved 2" closer to ensure full engagement.
-        t.use_tube1_contact = true;
-        t.tube1_contact = sbot_from_jerry(-73.0, 48.0);
-        t.tube_extra_seat_in = 2.0;
-
-        // Solo AWP Stage 6: Second cluster collection
-        // Source of truth: Jerry cluster 2 = (24, 24)
-        t.cluster2 = sbot_from_jerry(24.0, 24.0);
-        t.cluster2_collect_ms = 150;
-
-        // Solo AWP Stage 7: Center Middle Goal (back-score from opposite side)
-        // Source of truth: Jerry goal = (9, 9), robot pose = (15, 15) for back bumper at goal
-        t.use_mid_goal_solo_contact = true;
-        t.mid_goal_solo_contact = sbot_from_jerry(9.0, 9.0);
-        // Calculate pose target from contact point using back bumper
-        const double mid_solo_heading = 45.0;
-        t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
-        t.mid_goal_solo_heading_deg = mid_solo_heading;
-
-        // Keep old tube2 for now (unused in new solo design)
-        t.tube2 = {54, -24};
-        t.tube2_pulloff = {-18, -18};
-
-        // Timeouts: keep tight so we don't burn match time if something is slightly off.
-        // We rely on pose-close exit thresholds to end motions quickly once we're in position.
-        t.drive_timeout_ms = 5500;
-        t.turn_timeout_ms = 1300;
-
-        return t;
-    };
-
-    // Derived tuning: RED RIGHT is the Jerry-mirrored version of RED LEFT.
-    // Per your convention: mirror across the Jerry X axis => Jerry Y is multiplied by -1.
-    auto sbot_awp_half_red_right_tuning = [&]() -> SbotAwpHalfTuning {
-        // Start from the same defaults as RL (timeouts, scoring times, etc).
-        auto t = sbot_awp_half_red_left_tuning();
-
-        // Replace Jerry-derived points with their mirrored Jerry counterparts.
-        // NOTE: these calls depend on sbot_jerry_start_* having been set to the RR start.
-        t.cluster1 = sbot_from_jerry(-21.0, -21.0);
-
-        // Retreat point: (-48, 48) -> (-48, -48)
-        t.use_post_score_retreat_point = true;
-        t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
-
-        // Center Goal contacts mirrored.
-        if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
-        if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
-
-        // Tube contact mirrored: (-73, 48) -> (-73, -48)
-        if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(-73.0, -48.0);
-
-        // Solo AWP: Mirror cluster2 and mid_goal_solo
-        t.cluster2 = sbot_from_jerry(24.0, -24.0);  // (24, 24) -> (24, -24)
-        if (t.use_mid_goal_solo_contact) {
-            t.mid_goal_solo_contact = sbot_from_jerry(9.0, -9.0);  // (9, 9) -> (9, -9)
-            const double mid_solo_heading = sbot_mirror_heading(45.0);  // 45° -> 135°
-            t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
-            t.mid_goal_solo_heading_deg = mid_solo_heading;
-        }
-
-        // Mirror remaining internal-only geometry across the centerline.
-        t.tube1 = sbot_mirror_point_x(t.tube1);
-        t.low_goal_approach = sbot_mirror_point_x(t.low_goal_approach);
-        t.mid_goal_approach = sbot_mirror_point_x(t.mid_goal_approach);
-        t.tube2 = sbot_mirror_point_x(t.tube2);
-        t.tube2_pulloff = sbot_mirror_point_x(t.tube2_pulloff);
-
-        // Mirror headings.
-        t.low_goal_heading_deg = sbot_mirror_heading(t.low_goal_heading_deg);
-        t.mid_goal_heading_deg = sbot_mirror_heading(t.mid_goal_heading_deg);
-        t.high_goal_heading_deg = sbot_mirror_heading(t.high_goal_heading_deg);
-        t.tube_face_heading_deg = sbot_mirror_heading(t.tube_face_heading_deg);
-
-        // Override Stage 2: RED RIGHT should use Center Goal – Middle (back-score).
-        const double center_middle_dx = 0.0;
-        const double center_middle_dy = 13.0;
-        t.mid_goal_approach = {t.cluster1.x + center_middle_dx, t.cluster1.y + center_middle_dy};
-        t.mid_goal_heading_deg = 180;
-
-        // Keep Center-Lower distinct (not used in this path).
-        const double center_lower_dx = 13.0;
-        const double center_lower_dy = 13.0;
-        t.low_goal_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
-        t.low_goal_heading_deg = 45;
-
-        return t;
-    };
-
     auto sbot_run_awp_half_field = [&](SbotAutoSide side_, SbotAutoAlliance alliance_, bool solo_) {
         const uint32_t auton_start_ms = pros::millis();
         printf("SBOT AUTON: %s (%s %s)\n",
@@ -2096,54 +1884,6 @@ static void sbot_run_match_auto(
     sbot_run_awp_half_field(side, alliance, solo_awp);
 }
 
-static void sbot_run_skills_auto() {
-    printf("SBOT AUTON: SKILLS (first-pass)\n");
-    if (!validateSbotLemLibInitialization()) return;
-
-    sbot_safe_stop_mechanisms();
-    sbot_set_match_start_pose();
-    sbot_print_pose("skills start");
-
-    const uint32_t start_ms = pros::millis();
-    const uint32_t hard_stop_ms = 55000; // leave time buffer
-
-    int cycle = 0;
-    while (pros::millis() - start_ms < hard_stop_ms) {
-        cycle++;
-        printf("SBOT SKILLS: cycle %d\n", cycle);
-
-        // Collect run
-        sbot_intake_on_storage();
-        sbot_drive_to({0, 36}, 3000, false);
-
-        // Score mid
-        sbot_turn_to(90, 1500, false);
-        sbot_drive_relative(8, 1200, true);
-        sbot_score_mid_for(SBOT_MID_GOAL_SCORE_TIME_MS);
-
-        // Go "back" to start area
-        sbot_turn_to(270, 1500, false);
-        sbot_drive_to({0, 0}, 3000, false, false);
-
-        // Small top feed attempt
-        sbot_turn_to(0, 1500, false);
-        sbot_drive_relative(10, 1500, true);
-        sbot_score_top_for(750);
-
-        // Reset for next cycle
-        sbot_turn_to(180, 1500, false);
-        sbot_drive_relative(10, 1500, true);
-        sbot_turn_to(0, 1500, false);
-        sbot_safe_stop_mechanisms();
-
-        // Prevent tight looping if time is nearly up
-        pros::delay(100);
-    }
-
-    sbot_safe_stop_mechanisms();
-    printf("SBOT AUTON: SKILLS complete\n");
-}
-
 static const char* sbot_mode_name(int idx) {
     static const char* mode_names[] = {
         "DISABLED",     // 0
@@ -2227,6 +1967,8 @@ void SbotAutoSelector::displayOptions() {
         sbot_master->print(0, 0, "%d: %s", idx, name);
         sbot_master->print(1, 0, "L/R: nav  A: confirm");
     }
+
+    sbot_robodash_update_selector(idx, name, mode_confirmed);
 }
 
 void SbotAutoSelector::handleInput() {
@@ -2362,6 +2104,7 @@ SbotAutonomousSystem::SbotAutonomousSystem() {}
 void SbotAutonomousSystem::initialize() {
     // Initialize LemLib for sbot (safe to call once)
     initializeSbotLemLib();
+    sbot_robodash_init();
 }
 
 void SbotAutonomousSystem::updateSelector() {
@@ -3233,3 +2976,4 @@ void SbotAutonomousSystem::runTestIndexer() {
 
     printf("SBOT AUTON TEST: INDEXER done\n");
 }
+#endif

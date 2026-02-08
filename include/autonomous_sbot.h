@@ -41,11 +41,6 @@ public:
     bool isConfirmed() const { return mode_confirmed; }
     void forceDisplayRefresh();  // Force screen update even if state unchanged (prevents blank screen)
 
-    // Test methods to simulate controller input without physical hardware
-    void simulateLeftButton();  // Simulate D-pad Left press
-    void simulateRightButton(); // Simulate D-pad Right press
-    void simulateConfirmButton(); // Simulate A button press
-
 private:
     SbotAutoMode selected_mode;
     int selector_position;
