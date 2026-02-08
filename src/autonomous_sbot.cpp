@@ -2,6 +2,90 @@
  * autonomous_sbot.cpp - Autonomous system dispatch for sbot.
  */
 
+#include "autonomous_sbot.h"
+
+#include "autonomous_infrastructure.h"
+#include "autonomous_match_awp.h"
+#include "autonomous_skills.h"
+#include "lemlib_config_sbot.h"
+#include "robodash_selector.h"
+
+#include <cstdio>
+
+SbotAutonomousSystem::SbotAutonomousSystem() {}
+
+void SbotAutonomousSystem::initialize() {
+    // Initialize LemLib for sbot (safe to call once)
+    initializeSbotLemLib();
+    sbot_robodash_init();
+}
+
+void SbotAutonomousSystem::updateSelector() {
+    selector.update();
+}
+
+void SbotAutonomousSystem::run() {
+    SbotAutoMode mode = selector.getMode();
+
+    const bool should_time = (mode != SbotAutoMode::DISABLED);
+    const uint32_t auton_total_start_ms = should_time ? pros::millis() : 0;
+    if (should_time) {
+        sbot_auton_elapsed_active = true;
+        sbot_auton_elapsed_start_ms = auton_total_start_ms;
+        sbot_print_auton_elapsed("auton_start");
+    }
+
+    switch (mode) {
+        case SbotAutoMode::LEFT:   runLeft();   break;
+        case SbotAutoMode::RIGHT:  runRight();  break;
+        case SbotAutoMode::RED_LEFT_SOLO_AWP:   sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::RED,  true); break;
+        case SbotAutoMode::BLUE_LEFT_SOLO_AWP:  sbot_run_match_auto(SbotAutoSide::LEFT,  SbotAutoAlliance::BLUE, true); break;
+        case SbotAutoMode::BLUE_RIGHT_SOLO_AWP: sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::BLUE, true); break;
+        case SbotAutoMode::SKILLS:     runSkills();    break;
+        case SbotAutoMode::TEST_SWEEP_TO_LOW_GOAL: runTestSweepToLowGoal(); break;
+        case SbotAutoMode::TEST_DRIVE:   runTestDrive();   break;
+        case SbotAutoMode::TEST_DRIVE_SHORT: runTestDriveShort(); break;
+        case SbotAutoMode::TEST_LOW_GOAL_CUSTOM_START: runTestLowGoalCustomStart(); break;
+        case SbotAutoMode::TEST_JERRY_POSE_MONITOR: runTestJerryPoseMonitor(); break;
+        case SbotAutoMode::TEST_FOLLOW_JERRY_PATH: runTestFollowJerryPath(); break;
+        case SbotAutoMode::TEST_POSE_FINDER_X0_LINE_90: runTestPoseFinderX0Line90(); break;
+        case SbotAutoMode::TEST_TURN:    runTestTurn();    break;
+        case SbotAutoMode::TEST_INTAKE:  runTestIntake();  break;
+        case SbotAutoMode::TEST_INDEXER: runTestIndexer(); break;
+        case SbotAutoMode::DISABLED:
+        default:
+            // Do nothing
+            break;
+    }
+
+    if (should_time) {
+        const uint32_t dur_ms = pros::millis() - auton_total_start_ms;
+        printf("SBOT AUTON TOTAL: %u ms (%.2f s)\n", static_cast<unsigned>(dur_ms), dur_ms / 1000.0);
+        sbot_auton_elapsed_active = false;
+    }
+}
+
+void SbotAutonomousSystem::runLeft() {
+    printf("MARKER04\n");
+    printf("\n=== SbotAutonomousSystem::runLeft() CALLED ===\n");
+    printf("SBOT: Executing RED LEFT autonomous\n");
+    fflush(stdout);
+    sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED, false);
+    printf("=== SbotAutonomousSystem::runLeft() COMPLETE ===\n\n");
+    fflush(stdout);
+}
+
+void SbotAutonomousSystem::runRight() {
+    sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::RED, false);
+}
+
+void SbotAutonomousSystem::runSkills() {
+    sbot_run_skills_auto();
+}
+/**
+ * autonomous_sbot.cpp - Autonomous system dispatch for sbot.
+ */
+
 
 #include "autonomous_sbot.h"
 
