@@ -151,21 +151,21 @@ void sbot_run_match_auto(
         sbot_safe_stop_mechanisms();
 
         const bool low_goal_case =
-            (alliance_ == SbotAutoAlliance::RED) ? (side_ == SbotAutoSide::LEFT) : (side_ == SbotAutoSide::RIGHT);
+            (alliance_ == SbotAutoAlliance::RED) ? (side_ == SbotAutoSide::RIGHT) : (side_ == SbotAutoSide::RIGHT);
 
         // Select the Jerry start used for conversions + printing.
         // Canonical routes:
-        // - low_goal_case => canonical RED LEFT geometry => RL Jerry start
-        // - else          => canonical RED RIGHT geometry => RR Jerry start
+        // - low_goal_case => canonical RED RIGHT geometry => RR Jerry start
+        // - else          => canonical RED LEFT geometry => RL Jerry start
         if (low_goal_case) {
-            sbot_jerry_start_x = SBOT_JERRY_START_RL_X;
-            sbot_jerry_start_y = SBOT_JERRY_START_RL_Y;
-        } else {
             sbot_jerry_start_x = SBOT_JERRY_START_RR_X;
             sbot_jerry_start_y = SBOT_JERRY_START_RR_Y;
+        } else {
+            sbot_jerry_start_x = SBOT_JERRY_START_RL_X;
+            sbot_jerry_start_y = SBOT_JERRY_START_RL_Y;
         }
 
-        const auto t = low_goal_case ? sbot_awp_half_red_left_tuning() : sbot_awp_half_red_right_tuning();
+        const auto t = low_goal_case ? sbot_awp_half_red_right_tuning() : sbot_awp_half_red_left_tuning();
 
         if (!start_from_cluster_sweep) {
             sbot_set_match_start_pose();

@@ -36,7 +36,7 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
 
     // Center Goal – Lower approach (front-score).
     t.low_goal_approach = center_lower_approach;
-    t.low_goal_heading_deg = 45;
+    t.low_goal_heading_deg = -45;
     // Lower-goal scoring: add extra time to ensure balls fully clear.
     t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
     // Use a measured front-bumper contact point for the Center Goal.
@@ -47,7 +47,7 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
 
     // Center Goal – Middle (back-score).
     t.mid_goal_approach = center_middle_approach;
-    t.mid_goal_heading_deg = 180;
+    t.mid_goal_heading_deg = -135;
     t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
     // Measured back-bumper contact point for Center Goal – Middle.
     // Source of truth (Jerry field coords, inches): (-9, -9)
@@ -93,7 +93,7 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
     t.use_mid_goal_solo_contact = true;
     t.mid_goal_solo_contact = sbot_from_jerry(9.0, 9.0);
     // Calculate pose target from contact point using back bumper
-    const double mid_solo_heading = 45.0;
+    const double mid_solo_heading = -135.0;
     t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
     t.mid_goal_solo_heading_deg = mid_solo_heading;
 

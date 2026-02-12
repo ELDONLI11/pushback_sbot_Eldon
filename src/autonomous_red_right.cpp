@@ -28,7 +28,7 @@ SbotAwpHalfTuning sbot_awp_half_red_right_tuning() {
     t.cluster2 = sbot_from_jerry(24.0, -24.0);  // (24, 24) -> (24, -24)
     if (t.use_mid_goal_solo_contact) {
         t.mid_goal_solo_contact = sbot_from_jerry(9.0, -9.0);  // (9, 9) -> (9, -9)
-        const double mid_solo_heading = sbot_mirror_heading(45.0);  // 45° -> 135°
+        const double mid_solo_heading = sbot_mirror_heading(-135.0);  // -135° -> 135°
         t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
         t.mid_goal_solo_heading_deg = mid_solo_heading;
     }
@@ -50,13 +50,13 @@ SbotAwpHalfTuning sbot_awp_half_red_right_tuning() {
     const double center_middle_dx = 0.0;
     const double center_middle_dy = 13.0;
     t.mid_goal_approach = {t.cluster1.x + center_middle_dx, t.cluster1.y + center_middle_dy};
-    t.mid_goal_heading_deg = 180;
+    t.mid_goal_heading_deg = -135;
 
     // Keep Center-Lower distinct (not used in this path).
     const double center_lower_dx = 13.0;
     const double center_lower_dy = 13.0;
     t.low_goal_approach = {t.cluster1.x + center_lower_dx, t.cluster1.y + center_lower_dy};
-    t.low_goal_heading_deg = 45;
+    t.low_goal_heading_deg = -45;
 
     return t;
 }
