@@ -12,6 +12,7 @@
 #include "pneumatics.h"
 #include "color_sensor_system.h"
 #include "autonomous_sbot.h"
+#include "autonomous_match_awp.h"
 #include "robodash_selector.h"
 #include "lemlib_config_sbot.h"
 
