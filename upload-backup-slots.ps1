@@ -47,7 +47,7 @@ function Write-Error {
 
 # Backup configurations: each entry is Slot#, Name, Mode to hardcode (empty Code = use default)
 $backupSlots = @(
-    @{ Slot = 1; Name = 'sbot-selector'; Code = '' },  # Default with RoboDash selector
+    @{ Slot = 1; Name = 'sbot-selector'; Code = '' },               # Default with RoboDash selector
     @{ Slot = 2; Name = 'leftmid';  Code = 'sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED, false);' },
     @{ Slot = 3; Name = 'rightlow'; Code = 'sbot_run_match_auto(SbotAutoSide::RIGHT, SbotAutoAlliance::RED, false);' },
     @{ Slot = 4; Name = 'leftsolo'; Code = 'sbot_run_match_auto(SbotAutoSide::LEFT, SbotAutoAlliance::RED, true);' },

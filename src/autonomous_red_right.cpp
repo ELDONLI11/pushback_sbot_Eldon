@@ -11,23 +11,23 @@ SbotAwpHalfTuning sbot_awp_half_red_right_tuning() {
 
     // Replace Jerry-derived points with their mirrored Jerry counterparts.
     // NOTE: these calls depend on sbot_jerry_start_* having been set to the RR start.
-    t.cluster1 = sbot_from_jerry(-21.0, -21.0);
+    t.cluster1 = sbot_from_jerry(RedRight::CLUSTER1_JERRY_X, RedRight::CLUSTER1_JERRY_Y);
 
-    // Retreat point: (-48, 48) -> (-48, -48)
+    // Retreat point
     t.use_post_score_retreat_point = true;
-    t.post_score_retreat_point = sbot_from_jerry(-48.0, -48.0);
+    t.post_score_retreat_point = sbot_from_jerry(RedRight::RETREAT_POINT_JERRY_X, RedRight::RETREAT_POINT_JERRY_Y);
 
-    // Center Goal contacts mirrored.
-    if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(-9.0, -9.0);
-    if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
+    // Center Goal contacts.
+    if (t.use_low_goal_contact) t.low_goal_contact = sbot_from_jerry(RedRight::CENTER_LOW_GOAL_JERRY_X, RedRight::CENTER_LOW_GOAL_JERRY_Y);
+    if (t.use_mid_goal_contact) t.mid_goal_contact = sbot_from_jerry(RedRight::CENTER_MID_GOAL_JERRY_X, RedRight::CENTER_MID_GOAL_JERRY_Y);
 
-    // Tube contact mirrored: (-73, 48) -> (-73, -48)
-    if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(-73.0, -48.0);
+    // Tube contact
+    if (t.use_tube1_contact) t.tube1_contact = sbot_from_jerry(RedRight::LOADER_CONTACT_JERRY_X, RedRight::LOADER_CONTACT_JERRY_Y);
 
-    // Solo AWP: Mirror cluster2 and mid_goal_solo
-    t.cluster2 = sbot_from_jerry(24.0, -24.0);  // (24, 24) -> (24, -24)
+    // Solo AWP: Use RedRight:: constants
+    t.cluster2 = sbot_from_jerry(RedRight::CLUSTER2_JERRY_X, RedRight::CLUSTER2_JERRY_Y);
     if (t.use_mid_goal_solo_contact) {
-        t.mid_goal_solo_contact = sbot_from_jerry(9.0, -9.0);  // (9, 9) -> (9, -9)
+        t.mid_goal_solo_contact = sbot_from_jerry(RedRight::SOLO_MID_GOAL_JERRY_X, RedRight::SOLO_MID_GOAL_JERRY_Y);
         const double mid_solo_heading = sbot_mirror_heading(-135.0);  // -135° -> 135°
         t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
         t.mid_goal_solo_heading_deg = mid_solo_heading;

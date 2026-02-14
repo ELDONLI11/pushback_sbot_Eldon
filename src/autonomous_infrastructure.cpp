@@ -607,8 +607,14 @@ bool sbot_drive_relative_stall_exit(
 // ============================================================================
 
 void sbot_safe_stop_mechanisms() {
-    if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-    if (sbot_indexer) sbot_indexer->setMode(IndexerMode::OFF);
+    if (sbot_intake) {
+        sbot_intake->setMode(IntakeMode::OFF);
+        sbot_intake->update();
+    }
+    if (sbot_indexer) {
+        sbot_indexer->setMode(IndexerMode::OFF);
+        sbot_indexer->update();
+    }
     if (sbot_goal_flap) sbot_goal_flap->close();
     if (sbot_batch_loader) sbot_batch_loader->retract();
 }
@@ -616,7 +622,9 @@ void sbot_safe_stop_mechanisms() {
 void sbot_intake_on_storage() {
     if (!sbot_intake || !sbot_indexer || !sbot_goal_flap) return;
     sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
+    sbot_intake->update();
     sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
+    sbot_indexer->update();
     sbot_goal_flap->close();
 }
 

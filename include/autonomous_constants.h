@@ -35,8 +35,8 @@ static constexpr double SBOT_BACK_BUMPER_IN = 7.5;
 
 // Red Left start (canonical base position in Jerry coordinates)
 // This is where the LemLib pose point (rotation center) is located at match start
-static constexpr double SBOT_JERRY_START_RL_X_BASE = -50.0;
-static constexpr double SBOT_JERRY_START_RL_Y_BASE = 15.0;
+static constexpr double SBOT_JERRY_START_RL_X_BASE = -46.6;
+static constexpr double SBOT_JERRY_START_RL_Y_BASE = 13.0;
 
 // Fine-tuning adjustments (inches) for on-field calibration
 // If robot consistently ends too far RIGHT (+X in our frame), DECREASE Y fine adjust
@@ -93,35 +93,35 @@ static constexpr bool SBOT_PRINT_WAIT_TIMES = true;
 // ----------------------------------------------------------------------------
 namespace RedLeft {
     // Ring clusters
-    static constexpr double CLUSTER1_JERRY_X = -24.0;
-    static constexpr double CLUSTER1_JERRY_Y = 24.0;
+    static constexpr double CLUSTER1_JERRY_X = -17.0;
+    static constexpr double CLUSTER1_JERRY_Y = 26.0;
     
-    static constexpr double CLUSTER2_JERRY_X = 24.0;
-    static constexpr double CLUSTER2_JERRY_Y = 24.0;
+    static constexpr double CLUSTER2_JERRY_X = 17.0;
+    static constexpr double CLUSTER2_JERRY_Y = 26.0;
     
     // Center Goal - Lower (front bumper contact point)
     static constexpr double CENTER_LOW_GOAL_JERRY_X = -9.0;
     static constexpr double CENTER_LOW_GOAL_JERRY_Y = 9.0;
     
     // Center Goal - Middle (back bumper contact point)
-    static constexpr double CENTER_MID_GOAL_JERRY_X = -9.0;
-    static constexpr double CENTER_MID_GOAL_JERRY_Y = -9.0;
+    static constexpr double CENTER_MID_GOAL_JERRY_X = -2.7;
+    static constexpr double CENTER_MID_GOAL_JERRY_Y = 4.2;
     
     // Solo Middle Goal (back bumper contact point, opposite side)
-    static constexpr double SOLO_MID_GOAL_JERRY_X = 9.0;
-    static constexpr double SOLO_MID_GOAL_JERRY_Y = 9.0;
+    static constexpr double SOLO_MID_GOAL_JERRY_X = 7.0;
+    static constexpr double SOLO_MID_GOAL_JERRY_Y = 7.0;
     
     // Post-score retreat point
     static constexpr double RETREAT_POINT_JERRY_X = -48.0;
-    static constexpr double RETREAT_POINT_JERRY_Y = 48.0;
+    static constexpr double RETREAT_POINT_JERRY_Y = 51.0;
     
     // Match loader contact point (front bumper)
     static constexpr double LOADER_CONTACT_JERRY_X = -73.0;
-    static constexpr double LOADER_CONTACT_JERRY_Y = 48.0;
+    static constexpr double LOADER_CONTACT_JERRY_Y = 51.0;
     
     // Long goal end position
-    static constexpr double LONG_GOAL_END_JERRY_X = -31.0;
-    static constexpr double LONG_GOAL_END_JERRY_Y = 48.0;
+    static constexpr double LONG_GOAL_END_JERRY_X = -21.0;
+    static constexpr double LONG_GOAL_END_JERRY_Y = 51.0;
 }
 
 // ----------------------------------------------------------------------------
@@ -129,23 +129,23 @@ namespace RedLeft {
 // ----------------------------------------------------------------------------
 namespace RedRight {
     // Ring clusters
-    static constexpr double CLUSTER1_JERRY_X = -24.0;
-    static constexpr double CLUSTER1_JERRY_Y = -24.0;  // Y flipped
+    static constexpr double CLUSTER1_JERRY_X = -21.0;
+    static constexpr double CLUSTER1_JERRY_Y = -21.0;  // Y flipped
     
-    static constexpr double CLUSTER2_JERRY_X = 24.0;
-    static constexpr double CLUSTER2_JERRY_Y = -24.0;  // Y flipped
+    static constexpr double CLUSTER2_JERRY_X = 21.0;
+    static constexpr double CLUSTER2_JERRY_Y = -21.0;  // Y flipped
     
     // Center Goal - Lower (front bumper contact point)
-    static constexpr double CENTER_LOW_GOAL_JERRY_X = -9.0;
-    static constexpr double CENTER_LOW_GOAL_JERRY_Y = -9.0;  // Y flipped
+    static constexpr double CENTER_LOW_GOAL_JERRY_X = -7.0;
+    static constexpr double CENTER_LOW_GOAL_JERRY_Y = -7.0;  // Y flipped
     
     // Center Goal - Middle (back bumper contact point)
-    static constexpr double CENTER_MID_GOAL_JERRY_X = -9.0;
-    static constexpr double CENTER_MID_GOAL_JERRY_Y = 9.0;  // Y flipped
+    static constexpr double CENTER_MID_GOAL_JERRY_X = -7.0;
+    static constexpr double CENTER_MID_GOAL_JERRY_Y = -7.0;  // Y flipped
     
     // Solo Middle Goal (back bumper contact point, opposite side)
-    static constexpr double SOLO_MID_GOAL_JERRY_X = 9.0;
-    static constexpr double SOLO_MID_GOAL_JERRY_Y = -9.0;  // Y flipped
+    static constexpr double SOLO_MID_GOAL_JERRY_X = 5.0;
+    static constexpr double SOLO_MID_GOAL_JERRY_Y = -5.0;  // Y flipped
     
     // Post-score retreat point
     static constexpr double RETREAT_POINT_JERRY_X = -48.0;
@@ -156,8 +156,8 @@ namespace RedRight {
     static constexpr double LOADER_CONTACT_JERRY_Y = -48.0;  // Y flipped
     
     // Long goal end position
-    static constexpr double LONG_GOAL_END_JERRY_X = -31.0;
-    static constexpr double LONG_GOAL_END_JERRY_Y = -48.0;  // Y flipped (assumed, not in original)
+    static constexpr double LONG_GOAL_END_JERRY_X = -21.0;
+    static constexpr double LONG_GOAL_END_JERRY_Y = -51.0;  // Y flipped from RedLeft (+51 -> -51)
 }
 
 // ============================================================================
@@ -175,7 +175,7 @@ static constexpr double SBOT_HIGH_GOAL_BACK_IN_FROM_TUBE_IN = 24.0;
 
 // Collection timing (milliseconds)
 static constexpr uint32_t SBOT_CLUSTER2_COLLECT_MS = 150;
-static constexpr uint32_t SBOT_TUBE_PULL_MS = 1000;
+static constexpr uint32_t SBOT_TUBE_PULL_MS = 500;
 
 // Timeout values (milliseconds)
 static constexpr uint32_t SBOT_DRIVE_TIMEOUT_MS = 2500;

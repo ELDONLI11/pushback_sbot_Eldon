@@ -248,21 +248,42 @@ void sbot_match_score_mid_for(uint32_t ms, bool run_intake) {
     // For RED LEFT, we skip intake to keep balls for long goal
     if (run_intake && sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
     sbot_indexer->setMode(IndexerMode::FEED_BACKWARD_MIDDLE);
-    sbot_run_for_ms(ms);
+
+    const uint32_t start = pros::millis();
+    while (pros::millis() - start < ms) {
+        if (run_intake && sbot_intake) sbot_intake->update();
+        sbot_indexer->update();
+        pros::delay(10);
+    }
+
     sbot_indexer->setMode(IndexerMode::OFF);
-    if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
-    sbot_run_for_ms(120);
+    sbot_indexer->update();
+    if (sbot_intake) {
+        sbot_intake->setMode(IntakeMode::OFF);
+        sbot_intake->update();
+    }
+    pros::delay(120);
 }
 
 void sbot_match_score_low_for(uint32_t ms) {
     // Match driver behavior: low-goal scoring is intake reverse only.
     if (!sbot_intake) return;
 
-    if (sbot_indexer) sbot_indexer->setMode(IndexerMode::OFF);
+    if (sbot_indexer) {
+        sbot_indexer->setMode(IndexerMode::OFF);
+        sbot_indexer->update();
+    }
     sbot_intake->setMode(IntakeMode::REVERSE_LOW_GOAL);
-    sbot_run_for_ms(ms);
+
+    const uint32_t start = pros::millis();
+    while (pros::millis() - start < ms) {
+        sbot_intake->update();
+        pros::delay(10);
+    }
+
     sbot_intake->setMode(IntakeMode::OFF);
-    sbot_run_for_ms(120);
+    sbot_intake->update();
+    pros::delay(120);
 }
 
 void sbot_match_score_top_for(uint32_t ms) {
@@ -271,6 +292,13 @@ void sbot_match_score_top_for(uint32_t ms) {
     if (sbot_goal_flap) sbot_goal_flap->open();
     if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
     sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
-    sbot_run_for_ms(ms);
+
+    const uint32_t start = pros::millis();
+    while (pros::millis() - start < ms) {
+        if (sbot_intake) sbot_intake->update();
+        sbot_indexer->update();
+        pros::delay(10);
+    }
+
     sbot_safe_stop_mechanisms();
 }

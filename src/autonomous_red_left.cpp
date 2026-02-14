@@ -18,8 +18,7 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
     t.clear_barrier_in = 0.0;
 
     // Cluster (RED LEFT) from Jerry field points.
-    // Source of truth: Jerry cluster = (-21, 21)
-    t.cluster1 = sbot_from_jerry(-21.0, 21.0);
+    t.cluster1 = sbot_from_jerry(RedLeft::CLUSTER1_JERRY_X, RedLeft::CLUSTER1_JERRY_Y);
     t.cluster_collect_ms = 150;
 
     // Center Goal – Lower (RED LEFT / BLUE RIGHT): from the cluster,
@@ -40,19 +39,16 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
     // Lower-goal scoring: add extra time to ensure balls fully clear.
     t.low_goal_score_ms = SBOT_LOW_GOAL_SCORE_TIME_MS + 750;
     // Use a measured front-bumper contact point for the Center Goal.
-    // Moved 1 inch forward on diagonal (45°): +0.707" in both X and Y
-    // Source of truth (Jerry field coords, inches): (-8.3, 9.7)
     t.use_low_goal_contact = true;
-    t.low_goal_contact = sbot_from_jerry(-8.3, 9.7);
+    t.low_goal_contact = sbot_from_jerry(RedLeft::CENTER_LOW_GOAL_JERRY_X, RedLeft::CENTER_LOW_GOAL_JERRY_Y);
 
     // Center Goal – Middle (back-score).
     t.mid_goal_approach = center_middle_approach;
     t.mid_goal_heading_deg = -135;
     t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
     // Measured back-bumper contact point for Center Goal – Middle.
-    // Source of truth (Jerry field coords, inches): (-9, 9)
     t.use_mid_goal_contact = true;
-    t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
+    t.mid_goal_contact = sbot_from_jerry(RedLeft::CENTER_MID_GOAL_JERRY_X, RedLeft::CENTER_MID_GOAL_JERRY_Y);
 
     // Stage 5: Long Goal scoring
     t.high_goal_heading_deg = 180;
@@ -61,10 +57,8 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
     t.high_goal_back_in_from_tube_in = 24.0;
 
     // Force retreat to a measured absolute point (start-relative frame).
-    // This point represents the robot pose point (drivetrain rotation center / "center" used by LemLib).
     t.use_post_score_retreat_point = true;
-    // Source of truth: Jerry retreat = (-48, 48)
-    t.post_score_retreat_point = sbot_from_jerry(-48.0, 48.0);
+    t.post_score_retreat_point = sbot_from_jerry(RedLeft::RETREAT_POINT_JERRY_X, RedLeft::RETREAT_POINT_JERRY_Y);
 
     // After retreat, turn to face alliance wall where the loader is.
     t.tube_face_heading_deg = 180;
@@ -74,24 +68,21 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
 
     // Loader (tube) pose points (fallback when not using contact points).
     t.tube1 = {-33, -11.0};
-    t.tube_pull_ms = 100;
+    t.tube_pull_ms = 250;
 
-    // Loader contact point (field feature, Jerry coords): (-73, 48).
+    // Loader contact point (field feature, Jerry coords).
     // This is where the FRONT of the robot/loader should contact the match loader.
-    // Moved 2" closer to ensure full engagement.
     t.use_tube1_contact = true;
-    t.tube1_contact = sbot_from_jerry(-73.0, 48.0);
-    t.tube_extra_seat_in = 2.0;
+    t.tube1_contact = sbot_from_jerry(RedLeft::LOADER_CONTACT_JERRY_X, RedLeft::LOADER_CONTACT_JERRY_Y);
+    t.tube_extra_seat_in = 4.0;
 
     // Solo AWP Stage 6: Second cluster collection
-    // Source of truth: Jerry cluster 2 = (24, 24)
-    t.cluster2 = sbot_from_jerry(24.0, 24.0);
+    t.cluster2 = sbot_from_jerry(RedLeft::CLUSTER2_JERRY_X, RedLeft::CLUSTER2_JERRY_Y);
     t.cluster2_collect_ms = 150;
 
     // Solo AWP Stage 7: Center Middle Goal (back-score from opposite side)
-    // Source of truth: Jerry goal = (9, 9), robot pose = (15, 15) for back bumper at goal
     t.use_mid_goal_solo_contact = true;
-    t.mid_goal_solo_contact = sbot_from_jerry(9.0, 9.0);
+    t.mid_goal_solo_contact = sbot_from_jerry(RedLeft::SOLO_MID_GOAL_JERRY_X, RedLeft::SOLO_MID_GOAL_JERRY_Y);
     // Calculate pose target from contact point using back bumper
     const double mid_solo_heading = -135.0;
     t.mid_goal_solo_approach = sbot_pose_from_back_contact(t.mid_goal_solo_contact, mid_solo_heading, SBOT_BACK_BUMPER_IN);
