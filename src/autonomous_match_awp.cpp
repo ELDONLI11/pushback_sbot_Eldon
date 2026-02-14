@@ -230,15 +230,15 @@ void sbot_run_match_auto(
             // Stage 1: collect nearby block cluster FIRST.
             printf("MARKER07\n");
             printf("AWP STAGE 1: cluster collect\n");
-            // Desired sequence:
-            // 1) start approaching cluster WITHOUT intake (prevent spinning intake from hitting balls)
+            // Desired sequence (intake is already running from the start):
+            // 1) approach cluster with intake running
             // 2) deploy loader DURING forward motion (so it lands ON TOP of balls, trapping them)
-            // 3) turn ON intake and continue sweep/collect
-            // 4) retract + wait for retraction
+            // 3) finish drive to cluster
+            // 4) dwell to collect
             // 5) turn toward center goal
             if (!sbot_chassis) return;
 
-            // 1) start approach to cluster WITHOUT intake running
+            // 1) approach cluster (intake already running)
             {
                 const SbotPoint cluster_target = sbot_apply_alliance_transform_only(t.cluster1, alliance_);
                 printf("CLUSTER: Jerry coord (-21, 21) -> target (%.2f, %.2f)\n", cluster_target.x, cluster_target.y);
@@ -275,9 +275,7 @@ void sbot_run_match_auto(
                 // Shorter wait since loader descends faster now with extra piston
                 pros::delay(100);
 
-                // NOW turn on intake while still driving forward
-                sbot_intake_on_storage();
-                printf("CLUSTER: intake ON during approach\n");
+                // Intake is already running from the start of autonomous
 
                 // Finish the motion
                 sbot_wait_until_done_or_timed_out_timed("match.cluster.reach", t.drive_timeout_ms);
@@ -499,8 +497,8 @@ void sbot_run_match_auto(
                 sbot_batch_loader->retract();
                 pros::delay(180);
             }
-            // RED LEFT: Turn OFF intake to keep balls for long goal
-            if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
+            // Keep intake running through mid-goal approach
+            sbot_intake_on_storage();
             // Confirmed: we want REAR facing the goal, so we back into the scoring spot.
             {
                 const double goal_heading = sbot_apply_alliance_transform_heading_only(t.mid_goal_heading_deg, alliance_);
@@ -623,8 +621,7 @@ void sbot_run_match_auto(
                 }
             }
             // Ensure we spend at least 1s actively scoring.
-            // RED LEFT: Don't run intake to keep balls for long goal
-            sbot_match_score_mid_for(std::max<uint32_t>(t.mid_goal_score_ms, 1000), false);
+            sbot_match_score_mid_for(std::max<uint32_t>(t.mid_goal_score_ms, 1000), true);
             sbot_print_pose("after center middle (back)");
         }
 
@@ -639,7 +636,7 @@ void sbot_run_match_auto(
         sbot_safe_stop_mechanisms();
         // Retreat: either to an absolute point (preferred for RL non-solo), or straight back-out.
         if (t.use_post_score_retreat_point) {
-            // Do NOT turn here. Back straight to the retreat point, then turn at the retreat.
+            // Drive directly to the retreat point without turning first.
             const SbotPoint retreat = sbot_apply_alliance_transform_only(t.post_score_retreat_point, alliance_);
             printf("RETREAT target: (%.2f, %.2f)\n", retreat.x, retreat.y);
             if (sbot_chassis) {
@@ -649,8 +646,8 @@ void sbot_run_match_auto(
                 turnParams.minSpeed = 0;
 
                 lemlib::MoveToPointParams driveParams;
-                driveParams.forwards = false;
-                driveParams.maxSpeed = 60;  // Slowed from 95 for better alignment
+                driveParams.forwards = true;
+                driveParams.maxSpeed = 60;  // Controlled speed for alignment
                 driveParams.minSpeed = 0;
                 driveParams.earlyExitRange = 0;
 
@@ -678,7 +675,7 @@ void sbot_run_match_auto(
                     if (sbot_dist_in(now, retreat) > 2.0) {
                         const double retry_heading = sbot_get_best_heading_deg();
                         lemlib::MoveToPointParams retryDrive = driveParams;
-                        retryDrive.maxSpeed = 50;  // Slowed from 75 for better alignment
+                        retryDrive.maxSpeed = 50;  // Controlled speed for alignment
                         sbot_match_turn_point_turn(
                             "match.retreat.retry",
                             retreat.x,
@@ -743,7 +740,7 @@ void sbot_run_match_auto(
         }
 
         // Deploy the match loader AFTER the face-loader turn so the pneumatic impulse doesn't disturb heading.
-        if (low_goal_case && sbot_batch_loader) {
+        if (sbot_batch_loader) {
             sbot_batch_loader->extend();
             // Wait longer for loader to fully deploy before approaching tube.
             // The loader needs time to descend completely before we drive forward.
@@ -1010,7 +1007,11 @@ void sbot_run_match_auto(
         } else if (t.high_goal_back_in_from_tube_in > 0.0) {
             // We just finished loader pulling while facing the loader.
             // Backing up keeps the intake facing the loader and puts the rear into the Long Goal end.
-            sbot_intake_on_storage();
+            // Start top scorer DURING the approach so scoring begins immediately.
+            if (sbot_goal_flap) sbot_goal_flap->open();
+            if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
+            if (sbot_indexer) sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
+            printf("LONG GOAL: top scorer started during approach\n");
             sbot_match_drive_relative_stall_exit(t.high_goal_back_in_from_tube_in, 4000, false /* backwards */, 300, 0.35, 80);
         } else {
             // Fallback: use relative drive (high_goal_approach removed).

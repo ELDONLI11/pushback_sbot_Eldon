@@ -1,22 +1,30 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Build and upload ALL autonomous slots for sbot robot
+    Build and upload autonomous slots for sbot robot
     
 .DESCRIPTION
-    This script creates 5 program slots for tournament use:
-    - Slot 1: "sbot-selector" - Normal version with controller selector (USE THIS FIRST!)
+    This script creates program slots for tournament use:
+    - Slot 1: "sbot-selector" - Normal version with RoboDash selector (USE THIS FIRST!)
     - Slot 2: "leftmid"  - Hardcoded Red/Blue Left (Middle Goal)
     - Slot 3: "rightlow" - Hardcoded Red/Blue Right (Low Goal)
     - Slot 4: "leftsolo" - Hardcoded Solo AWP Left
     - Slot 5: "skills"   - Hardcoded Skills autonomous
     
-    If the selector fails in competition, slots 2-5 run without any button input.
+    By default uploads all 5 slots. Use -Slot or -SlotName to upload a single slot.
+    
+.EXAMPLE
+    .\upload-backup-slots.ps1                  # Upload all 5 slots
+    .\upload-backup-slots.ps1 -Slot 2          # Upload only slot 2 (leftmid)
+    .\upload-backup-slots.ps1 -SlotName skills  # Upload only the skills slot
+    .\upload-backup-slots.ps1 -Slot 1 -SkipBuild  # Upload slot 1, skip build
 #>
 
 param(
     [switch]$SkipBuild,
-    [string]$BrainName = ""
+    [string]$BrainName = "",
+    [int]$Slot = 0,
+    [string]$SlotName = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,11 +68,30 @@ Write-Step "Creating backup of $sourceFile"
 Copy-Item $sourceFile $backupFile -Force
 Write-Success "Backup created: $backupFile"
 
+# Filter to a single slot if -Slot or -SlotName was given
+$slotsToUpload = $backupSlots
+if ($Slot -gt 0) {
+    $slotsToUpload = @($backupSlots | Where-Object { $_.Slot -eq $Slot })
+    if ($slotsToUpload.Count -eq 0) {
+        Write-Error "No slot with number $Slot (valid: 1-5)"
+        exit 1
+    }
+    Write-Host "Uploading single slot: $Slot" -ForegroundColor Cyan
+} elseif ($SlotName -ne "") {
+    $slotsToUpload = @($backupSlots | Where-Object { $_.Name -eq $SlotName })
+    if ($slotsToUpload.Count -eq 0) {
+        $validNames = ($backupSlots | ForEach-Object { $_.Name }) -join ', '
+        Write-Error "No slot named '$SlotName' (valid: $validNames)"
+        exit 1
+    }
+    Write-Host "Uploading single slot: $SlotName" -ForegroundColor Cyan
+}
+
 try {
     # Read original file content
     $originalContent = Get-Content $sourceFile -Raw
 
-    foreach ($config in $backupSlots) {
+    foreach ($config in $slotsToUpload) {
         $slotNum = $config.Slot
         $slotName = $config.Name
         $hardcodedCode = $config.Code
@@ -73,8 +100,12 @@ try {
 
         # If Code is empty, use default (no modification)
         if ($hardcodedCode) {
-            # Modify the autonomous() function to hardcode the autonomous mode
-            # Insert hardcoded call at the beginning of the function
+            # 1) Flip the hardcoded-slot flag so dev mode runs autonomous immediately
+            $flagSearch = 'static const bool SBOT_IS_HARDCODED_SLOT = false;'
+            $flagReplace = 'static const bool SBOT_IS_HARDCODED_SLOT = true;'
+            $modifiedContent = $originalContent.Replace($flagSearch, $flagReplace)
+
+            # 2) Modify the autonomous() function to hardcode the autonomous mode
             $searchPattern = 'void autonomous() {' + "`n" + '    printf("MARKER01\n");' + "`n" + '    printf("=== SBOT AUTONOMOUS() ENTER ===\n");' + "`n" + '    printf("=== SBOT AUTONOMOUS START ===\n");' + "`n" + '    printf("SBOT: Running RoboDash selector\n");' + "`n" + '    printf("SBOT: selector.run_auton()\n");' + "`n" + '    fflush(stdout);' + "`n" + "`n" + '    selector.run_auton();'
             $replacement = @"
 void autonomous() {
@@ -95,7 +126,7 @@ void autonomous() {
     selector.run_auton();
 "@
             
-            $modifiedContent = $originalContent.Replace($searchPattern, $replacement)
+            $modifiedContent = $modifiedContent.Replace($searchPattern, $replacement)
 
             # Write modified content
             Set-Content $sourceFile $modifiedContent -NoNewline
@@ -141,16 +172,16 @@ void autonomous() {
     Write-Step "All slots uploaded successfully!"
     Write-Host ""
     Write-Host "Tournament slots ready:" -ForegroundColor Green
-    Write-Host "  Slot 1: sbot-selector - USE THIS FIRST (selector active)" -ForegroundColor Cyan
+    Write-Host "  Slot 1: sbot-selector - USE THIS FIRST (RoboDash selector)" -ForegroundColor Cyan
     Write-Host "  Slot 2: leftmid       - Backup: Red/Blue Left (Middle Goal)" -ForegroundColor Yellow
     Write-Host "  Slot 3: rightlow      - Backup: Red/Blue Right (Low Goal)" -ForegroundColor Yellow
     Write-Host "  Slot 4: leftsolo      - Backup: Solo AWP (Red Left)" -ForegroundColor Yellow
     Write-Host "  Slot 5: skills        - Backup: Skills Autonomous" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "Tournament strategy:" -ForegroundColor Cyan
-    Write-Host "  1. Always try Slot 1 first (use D-pad + A to select)" 
+    Write-Host "  1. Always try Slot 1 first (pick on brain touchscreen)" 
     Write-Host "  2. If selector fails, switch to appropriate backup slot (2-5)"
-    Write-Host "  3. Backup slots run immediately without any button input"
+    Write-Host "  3. Backup slots run immediately - no selection needed"
     Write-Host ""
     Write-Host "NOTE: Original code is ALWAYS restored after each upload," -ForegroundColor Magenta
     Write-Host "      even if upload fails. Your source files are never permanently changed." -ForegroundColor Magenta

@@ -4,7 +4,7 @@ This folder contains PowerShell scripts to create backup autonomous slots for to
 
 ## The Problem
 
-Your default code uses a controller-based autonomous selector (D-pad Left/Right + A to choose modes). **If the selector fails during a tournament** (controller connection issues, timing problems, etc.), you need a backup plan.
+Your default code uses a **RoboDash touchscreen selector** on the V5 Brain to choose autonomous modes. **If the selector fails during a tournament** (brain screen issues, timing problems, etc.), you need a backup plan.
 
 ## The Solution
 
@@ -42,25 +42,23 @@ This will:
 ### Normal Match (Selector Works)
 
 1. **Select Slot 1** (sbot-selector)
-2. Robot boots → controller shows selector
-3. Use **D-pad Left/Right + A** to choose:
-   - Press **RIGHT** for Red Right / Blue Right (Low Goal)
-   - Use **LEFT** (default) for Red Left / Blue Left (Middle Goal)
-   - Keep pressing RIGHT for Solo AWP or Skills
-4. Press **A** to confirm
-5. Match starts → your selected autonomous runs
+2. Robot boots → RoboDash selector appears on brain touchscreen
+3. Tap the autonomous route you want on the brain screen
+4. Match starts → your selected autonomous runs
 
-### Emergency Fallback (Selector Fails)
+### Backup Slots (Slots 2-5)
 
-If the selector doesn't show or doesn't respond:
+**No interaction needed** — these run their assigned autonomous immediately:
 
-1. **Before the match**: Switch to the appropriate backup slot:
-   - **Use Slot 2** (leftmid) for Red Left or Blue Left
-   - **Use Slot 3** (rightlow) for Red Right or Blue Right
-   - **Use Slot 4** (leftsolo) for Solo AWP
-   - **Use Slot 5** (skills) for Skills
-   
-2. **No button input needed** - autonomous runs immediately when match starts
+1. **Before the match**: Switch to the appropriate backup slot on the brain
+   - **Slot 2** (leftmid) for Red Left or Blue Left
+   - **Slot 3** (rightlow) for Red Right or Blue Right
+   - **Slot 4** (leftsolo) for Solo AWP
+   - **Slot 5** (skills) for Skills
+2. Match starts → hardcoded autonomous runs immediately
+3. No selector, no button input, no brain screen interaction
+
+This works the same in **both** competition mode and dev mode (testing).
 
 ## How It Works
 
@@ -163,13 +161,11 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 The script **temporarily** modifies `src/main.cpp` during each build, then **ALWAYS restores** the original - even if errors occur.
 
-Process for each slot:
-1. Backs up original file → `.backup`
-2. Modifies `autonomous()` function (or skips for Slot 1)
-3. Builds project
-4. Uploads to specific slot
-5. **Restores original** (in loop - happens after each slot)
-6. Final cleanup (in `finally` block - guaranteed to run)
+For each backup slot (2-5), the script:
+1. Sets `SBOT_IS_HARDCODED_SLOT = true` (so dev mode runs auto immediately)
+2. Injects the hardcoded autonomous call into `autonomous()`
+3. Builds and uploads to the slot
+4. Restores original code
 
 **Double safety**: Restore happens both in the loop AND in the finally block, so your source is protected even if the script crashes.
 

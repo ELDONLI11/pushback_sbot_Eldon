@@ -10,7 +10,7 @@ You pick a route by tapping on the brain screen — no controller D-pad needed.
 When no competition switch or field controller is connected, `opcontrol()` automatically
 enters **dev mode** before normal driver control starts.
 
-### How it works
+### Selector slot (Slot 1: sbot-selector)
 
 1. Upload code normally (`pros upload`)
 2. Power on robot (no competition switch plugged in)
@@ -20,31 +20,16 @@ enters **dev mode** before normal driver control starts.
 6. Or press **DOWN** on the controller to skip straight to driver control
 7. After autonomous completes (or is skipped), normal driver control begins
 
-### What you'll see in the terminal
+### Hardcoded backup slots (Slots 2-5)
 
+When uploaded via `upload-backup-slots.ps1`, backup slots run their
+assigned autonomous **immediately on power-up** — no selector, no button
+presses needed. Upload, power on, it runs.
+
+Terminal output:
 ```
 SBOT: development mode (no competition control)
-SBOT: Select autonomous on brain touchscreen
-SBOT: Press Y to run, DOWN to skip to driver control
-```
-
-Then either:
-```
-SBOT: DEV MODE - running selected autonomous
-=== SBOT AUTONOMOUS START ===
-...
-SBOT: DEV MODE - autonomous complete
-```
-or:
-```
-SBOT: DEV MODE - skipping autonomous
-```
-
-### Controller screen shows
-
-```
-DEV: select on brain
-Y=run  DOWN=skip
+SBOT: DEV MODE - hardcoded slot, running autonomous NOW
 ```
 
 ---
@@ -75,6 +60,7 @@ This most closely simulates match conditions.
 
 ### Competition mode (switch/field connected)
 
+**Selector slot:**
 ```
 initialize() → disabled()          → autonomous()       → opcontrol()
                  ↓                      ↓
@@ -82,15 +68,30 @@ initialize() → disabled()          → autonomous()       → opcontrol()
               (pick on brain)       (runs selected route)
 ```
 
+**Hardcoded backup slots:**
+```
+initialize() → disabled()          → autonomous()       → opcontrol()
+              (selector skipped)     (hardcoded call, runs immediately)
+```
+
 ### Dev mode (no competition control)
 
+**Selector slot:**
 ```
 initialize() → opcontrol()
                  ↓
               selector.focus()       // shows RoboDash on brain
               wait for Y or DOWN     // Y = run auton, DOWN = skip
-              selector.run_auton()   // if Y pressed
-              driver control loop    // normal driving
+              autonomous()           // runs selected route
+              driver control loop
+```
+
+**Hardcoded backup slots:**
+```
+initialize() → opcontrol()
+                 ↓
+              autonomous()           // runs immediately, no prompts
+              driver control loop
 ```
 
 ---

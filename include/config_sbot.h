@@ -82,7 +82,7 @@
 // Ball handling / scoring buttons (can be remapped later)
 #define SBOT_COLLECT_BUTTON        pros::E_CONTROLLER_DIGITAL_R1   // Intake+helper+indexer forward
 #define SBOT_TOP_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_R2   // Same as collect + open flap
-#define SBOT_MID_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_L1   // Timed middle goal drop
+#define SBOT_MID_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_A    // Timed middle goal drop (moved from L1)
 #define SBOT_LOW_GOAL_BUTTON       pros::E_CONTROLLER_DIGITAL_L2   // Timed low goal spit out
 
 // Reverse intake button (action button on top of joystick)
@@ -94,7 +94,7 @@
 #define SBOT_SET_BLUE_ALLIANCE_BTN pros::E_CONTROLLER_DIGITAL_DOWN
 
 // Pneumatic toggles (driver control)
-#define SBOT_GOAL_FLAP_TOGGLE_BTN  pros::E_CONTROLLER_DIGITAL_A    // Toggle scoring flap + descore arm
+#define SBOT_GOAL_FLAP_TOGGLE_BTN  pros::E_CONTROLLER_DIGITAL_L1   // Toggle scoring flap + descore arm (moved from A)
 #define SBOT_BATCH_LOADER_TOGGLE_BTN pros::E_CONTROLLER_DIGITAL_B  // Toggle match loader piston
 
 // Autonomous selector navigation (using D-pad + A)
@@ -108,17 +108,17 @@
 
 // Deadband and sensitivity for tank drive
 #define SBOT_JOYSTICK_DEADZONE     10
-#define SBOT_TANK_SENSITIVITY      0.5
+#define SBOT_TANK_SENSITIVITY      1.0
 
 // ========== RESPONSE CURVE CONTROL ==========
 // Squared curve gives fine control at low speeds but can be aggressive
 // Set to false to use linear response (simpler, might help with tipping)
-#define SBOT_USE_SQUARED_CURVE     false
+#define SBOT_USE_SQUARED_CURVE     true
 
 // If using squared curve, this scales down the output to make it less aggressive
 // 1.0 = full squared curve, 0.5 = halfway between linear and squared
 // Only used if SBOT_USE_SQUARED_CURVE is true
-#define SBOT_CURVE_SCALING         0.7
+#define SBOT_CURVE_SCALING         1.0
 
 // ========== ADAPTIVE SLEW RATE LIMITING ==========
 // Prevents tipping by limiting how fast motor commands can change.

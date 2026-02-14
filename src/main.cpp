@@ -13,8 +13,14 @@
 #include "color_sensor_system.h"
 #include "autonomous_sbot.h"
 #include "autonomous_match_awp.h"
+#include "autonomous_skills.h"
 #include "robodash_selector.h"
 #include "lemlib_config_sbot.h"
+
+// Upload script patches this to true for hardcoded backup slots (2-5).
+// When true, autonomous runs immediately without showing the RoboDash selector.
+// SBOT_SLOT_FLAG_LINE (do not remove - upload script searches for this)
+static const bool SBOT_IS_HARDCODED_SLOT = false;
 
 // Global subsystem pointers
 pros::Controller* sbot_master = nullptr;
@@ -116,10 +122,14 @@ void disabled() {
     printf("=== SBOT DISABLED() ENTER ===\n");
     fflush(stdout);
 
-    // Show RoboDash selector on brain screen so the driver can pick an autonomous
-    // while the robot is disabled (competition switch / field controller connected).
-    selector.focus();
-    printf("SBOT: RoboDash selector focused on brain screen\n");
+    if (!SBOT_IS_HARDCODED_SLOT) {
+        // Selector slot: show RoboDash on brain screen so the driver can
+        // pick an autonomous while the robot is disabled.
+        selector.focus();
+        printf("SBOT: RoboDash selector focused on brain screen\n");
+    } else {
+        printf("SBOT: Hardcoded slot - selector skipped, auto will run immediately\n");
+    }
     fflush(stdout);
 }
 
@@ -154,58 +164,71 @@ void opcontrol() {
     // DEV MODE: Run autonomous without competition hardware
     // ========================================================================
     // When no field controller / competition switch is connected, PROS skips
-    // disabled() and autonomous() and jumps straight to opcontrol().  In that
-    // case we let the driver:
-    //   1. Pick an autonomous on the brain's RoboDash touchscreen
-    //   2. Press Y on the controller to run it (or DOWN to skip to driver)
+    // disabled() and autonomous() and jumps straight to opcontrol().
+    //
+    // Hardcoded slots (2-5): run autonomous() immediately, no prompts.
+    // Selector slot  (1)  : show RoboDash on brain, Y = run, DOWN = skip.
     // ========================================================================
     if (!pros::competition::is_connected()) {
         printf("SBOT: development mode (no competition control)\n");
         fflush(stdout);
 
-        // Focus the RoboDash selector on the brain screen
-        selector.focus();
-
-        if (sbot_master->is_connected()) {
-            sbot_master->clear();
-            pros::delay(50);
-            sbot_master->print(0, 0, "DEV: select on brain");
-            pros::delay(50);
-            sbot_master->print(1, 0, "Y=run  DOWN=skip");
-        }
-        printf("SBOT: Select autonomous on brain touchscreen\n");
-        printf("SBOT: Press Y to run, DOWN to skip to driver control\n");
-        fflush(stdout);
-
-        // Wait for Y (run auton) or DOWN (skip to driver control)
-        bool run_auton = false;
-        while (true) {
-            if (sbot_master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
-                run_auton = true;
-                break;
-            }
-            if (sbot_master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN)) {
-                break;
-            }
-            // Break if competition control connects mid-wait
-            if (pros::competition::is_connected()) break;
-            pros::delay(20);
-        }
-
-        if (run_auton) {
-            printf("SBOT: DEV MODE - running selected autonomous\n");
+        if (SBOT_IS_HARDCODED_SLOT) {
+            // ---- Hardcoded backup slot: run autonomous immediately ----
+            printf("SBOT: DEV MODE - hardcoded slot, running autonomous NOW\n");
             fflush(stdout);
             if (sbot_master->is_connected()) {
                 sbot_master->clear();
                 pros::delay(50);
-                sbot_master->print(0, 0, "Running autonomous...");
+                sbot_master->print(0, 0, "Running auto...");
             }
-            selector.run_auton();
+            autonomous();
             printf("SBOT: DEV MODE - autonomous complete\n");
             fflush(stdout);
+
         } else {
-            printf("SBOT: DEV MODE - skipping autonomous\n");
+            // ---- Selector slot: show RoboDash, wait for Y / DOWN ----
+            selector.focus();
+
+            if (sbot_master->is_connected()) {
+                sbot_master->clear();
+                pros::delay(50);
+                sbot_master->print(0, 0, "DEV: select on brain");
+                pros::delay(50);
+                sbot_master->print(1, 0, "Y=run  DOWN=skip");
+            }
+            printf("SBOT: Select autonomous on brain touchscreen\n");
+            printf("SBOT: Press Y to run, DOWN to skip to driver control\n");
             fflush(stdout);
+
+            bool run_auton = false;
+            while (true) {
+                if (sbot_master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)) {
+                    run_auton = true;
+                    break;
+                }
+                if (sbot_master->get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN)) {
+                    break;
+                }
+                if (pros::competition::is_connected()) break;
+                pros::delay(20);
+            }
+
+            if (run_auton) {
+                printf("SBOT: DEV MODE - running selected autonomous\n");
+                fflush(stdout);
+                if (sbot_master->is_connected()) {
+                    sbot_master->clear();
+                    pros::delay(50);
+                    sbot_master->print(0, 0, "Running autonomous...");
+                }
+                autonomous();
+                printf("SBOT: DEV MODE - autonomous complete\n");
+                fflush(stdout);
+            } else {
+                printf("SBOT: DEV MODE - skipping autonomous\n");
+                fflush(stdout);
+            }
         }
 
         if (sbot_master->is_connected()) {

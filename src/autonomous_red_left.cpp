@@ -50,9 +50,9 @@ SbotAwpHalfTuning sbot_awp_half_red_left_tuning() {
     t.mid_goal_heading_deg = -135;
     t.mid_goal_score_ms = std::max<uint32_t>(SBOT_MID_GOAL_SCORE_TIME_MS, SBOT_MIN_SCORE_TIME_MS);
     // Measured back-bumper contact point for Center Goal – Middle.
-    // Source of truth (Jerry field coords, inches): (-9, -9)
+    // Source of truth (Jerry field coords, inches): (-9, 9)
     t.use_mid_goal_contact = true;
-    t.mid_goal_contact = sbot_from_jerry(-9.0, -9.0);
+    t.mid_goal_contact = sbot_from_jerry(-9.0, 9.0);
 
     // Stage 5: Long Goal scoring
     t.high_goal_heading_deg = 180;

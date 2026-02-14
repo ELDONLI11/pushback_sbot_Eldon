@@ -42,10 +42,9 @@ Legend:
 - **Blue** variants rotate 180°.
 
 Center Goal – Middle (used for Red Right / Blue Left):
-- Jerry **back contact**: `(-9, -9)`
-- Internal (pose-origin): `ourX = 15 - (-9) = 24`, `ourY = -9 - (-48) = 39` → `(24, 39)`
-- Internal (pose-origin): `ourX = 16 - (-9) = 25`, `ourY = -9 - (-48) = 39` → `(25, 39)`
-- Code converts this **back contact point** into a **pose target** using heading `180°` and back bumper `7.5"`.
+- Jerry **back contact**: `(-9, 9)`
+- Internal (pose-origin): `ourX = 15 - 9 = 6`, `ourY = -9 - (-50) = 41` → `(6, 41)`
+- Code converts this **back contact point** into a **pose target** using heading `-135°` and back bumper `7.5"`.
 
 ## What to provide next (optional)
 
