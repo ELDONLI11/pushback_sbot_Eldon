@@ -1,96 +1,115 @@
 # Testing Autonomous Selector Without Competition Hardware
 
-## Option 1: FREE - Software Simulation (Recommended)
-
-**No hardware needed!** Use PROS built-in competition control simulation.
-
-### Method A: Code-based simulation
-
-In [src/main.cpp](src/main.cpp), uncomment the competition control simulation block (around line 80):
-
-```cpp
-printf("\n=== ENABLING COMPETITION CONTROL SIMULATION ===\n");
-pros::competition::initialize();  // Enable competition mode
-return;
-```
-
-**What happens:**
-1. Robot starts in disabled mode
-2. `disabled()` runs → selector appears on controller
-3. Use D-pad Left/Right + A to select autonomous
-4. Press **Y button** on controller to transition to autonomous
-5. `autonomous()` runs with your selected mode
-6. Automatically transitions to driver control
-
-### Method B: PROS Terminal Commands
-
-Upload your code normally, then in PROS terminal:
-
-```bash
-pros terminal
-# Then type in the terminal:
-competition enable
-```
-
-This enables competition mode without code changes.
+The autonomous selector uses **RoboDash** on the V5 Brain touchscreen.
+You pick a route by tapping on the brain screen — no controller D-pad needed.
 
 ---
 
-## Option 2: Cheap Hardware - VEX Competition Switch
+## Option 1: Development Mode (No Hardware Needed)
 
-**Cost: ~$15-20 USD**
+When no competition switch or field controller is connected, `opcontrol()` automatically
+enters **dev mode** before normal driver control starts.
 
-**Product:** VEX V5 Competition Switch  
-**Part Number:** 276-4810  
+### How it works
+
+1. Upload code normally (`pros upload`)
+2. Power on robot (no competition switch plugged in)
+3. The RoboDash selector appears on the **brain touchscreen**
+4. Tap the autonomous route you want on the brain screen
+5. Press **Y** on the controller to run the selected autonomous
+6. Or press **DOWN** on the controller to skip straight to driver control
+7. After autonomous completes (or is skipped), normal driver control begins
+
+### What you'll see in the terminal
+
+```
+SBOT: development mode (no competition control)
+SBOT: Select autonomous on brain touchscreen
+SBOT: Press Y to run, DOWN to skip to driver control
+```
+
+Then either:
+```
+SBOT: DEV MODE - running selected autonomous
+=== SBOT AUTONOMOUS START ===
+...
+SBOT: DEV MODE - autonomous complete
+```
+or:
+```
+SBOT: DEV MODE - skipping autonomous
+```
+
+### Controller screen shows
+
+```
+DEV: select on brain
+Y=run  DOWN=skip
+```
+
+---
+
+## Option 2: VEX Competition Switch (~$15-20)
+
+**Product:** VEX V5 Competition Switch
+**Part Number:** 276-4810
 **URL:** https://www.vexrobotics.com/276-4810.html
 
-**What it does:**
-- Plugs into V5 Brain "Competition Port" (smart port labeled "COMP")
-- Has 3 positions: Disabled / Autonomous / Driver Control
-- Simulates official field controller behavior
+Plugs into the V5 Brain "Competition Port" (smart port labeled "COMP").
+Has 3 positions: Disabled / Autonomous / Driver Control.
 
-**How to use:**
+### How to use
+
 1. Plug switch into brain COMP port
-2. Set to "Disabled" position
-3. Controller selector appears
-4. Select autonomous with D-pad + A
-5. Flip switch to "Autonomous" 
-6. Robot runs selected autonomous
-7. Flip to "Driver" for driver control
+2. Set to **Disabled** position
+3. RoboDash selector appears on the brain touchscreen (via `disabled()`)
+4. Tap the autonomous route you want on the brain screen
+5. Flip switch to **Autonomous** → robot runs the selected autonomous
+6. Flip to **Driver** → normal driver control
+
+This most closely simulates match conditions.
 
 ---
 
-## Option 3: Controller Button Test (No Competition Mode)
+## How it works (code flow)
 
-Your code already supports this in development mode (no competition control connected):
+### Competition mode (switch/field connected)
 
-1. Upload code normally
-2. Power on robot (no competition switch)
-3. You have **10 seconds** to select autonomous using D-pad Left/Right + A
-4. Selected autonomous runs immediately
-5. Then transitions to driver control
+```
+initialize() → disabled()          → autonomous()       → opcontrol()
+                 ↓                      ↓
+              selector.focus()      selector.run_auton()
+              (pick on brain)       (runs selected route)
+```
 
-Check terminal output for: `"SBOT: development mode (no competition control)"`
+### Dev mode (no competition control)
+
+```
+initialize() → opcontrol()
+                 ↓
+              selector.focus()       // shows RoboDash on brain
+              wait for Y or DOWN     // Y = run auton, DOWN = skip
+              selector.run_auton()   // if Y pressed
+              driver control loop    // normal driving
+```
 
 ---
 
 ## Troubleshooting
 
+**Brain screen is blank / no selector:**
+- Check terminal for `SBOT: RoboDash selector focused on brain screen` (competition mode)
+  or `SBOT: development mode (no competition control)` (dev mode)
+- Make sure RoboDash library is installed (`pros conductor fetch robodash@2.3.1`)
+
 **Controller screen stays blank:**
-- Check terminal for `"SELECTOR: Displaying selection 0 - 'DISABLED'"`
-- If you see `"controller not connected"` → pair controller with brain
+- Pair controller with brain (Settings → Controller on brain)
 - Try power cycling the controller
 
-**Selector doesn't respond to buttons:**
-- Terminal should show `"SELECTOR: LEFT/RIGHT button pressed"` when you press D-pad
-- If no logs appear → controller not paired or button mapping issue
+**Y button does nothing in dev mode:**
+- Make sure you're in dev mode (no competition switch plugged in)
+- Check terminal output — if you see `opcontrol alive`, you're already past the selection step
 
-**"competition control simulation" doesn't work:**
-- Make sure you uncommented the code AND added `return;` statement
-- The return is critical - it exits initialize() and lets PROS handle the rest
-
----
-
-## Recommendation
-
-**Use Option 1 Method A** (competition control simulation) - it's free and most accurately simulates match conditions.
+**Autonomous runs but robot doesn't move:**
+- Check terminal for motor/sensor errors
+- Verify LemLib initialized: look for `SBOT: LemLib initialized` in terminal
