@@ -34,7 +34,7 @@ extern pros::MotorGroup* left_motor_group;
 extern pros::MotorGroup* right_motor_group;
 
 // Drivetrain specifications - WORKING VALUES from working_code.txt
-#define DRIVE_TRACK_WIDTH 12.5      // Distance between left and right wheels (inches) - PROVEN WORKING
+#define DRIVE_TRACK_WIDTH 10.2      // Distance between left and right wheels (inches) - PROVEN WORKING
 #define DRIVE_WHEEL_DIAMETER 3.25   // Diameter of drive wheels (inches) - 3.25" omni wheels (NEW_325)
 #define DRIVE_RPM 450               // Maximum RPM of blue cartridge motors at 6:1 ratio
 
@@ -62,7 +62,7 @@ extern lemlib::ExpoDriveCurve* steerCurve;
 extern pros::Rotation* vertical_encoder;
 extern pros::Rotation* horizontal_encoder;
 extern lemlib::TrackingWheel* vertical_tracking_wheel;
-extern lemlib::TrackingWheel* horizontal_tracking_wheel;
+//extern lemlib::TrackingWheel* horizontal_tracking_wheel;
 
 // =============================================================================
 // LEMLIB IMU CONFIGURATION

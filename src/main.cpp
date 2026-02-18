@@ -16,6 +16,7 @@
 #include "autonomous_skills.h"
 #include "robodash_selector.h"
 #include "lemlib_config_sbot.h"
+#include "autonomous_test_forward.h"
 
 // Upload script patches this to true for hardcoded backup slots (2-5).
 // When true, autonomous runs immediately without showing the RoboDash selector.
@@ -139,17 +140,7 @@ void competition_initialize() {
 }
 
 void autonomous() {
-    printf("MARKER01\n");
-    printf("=== SBOT AUTONOMOUS() ENTER ===\n");
-    printf("=== SBOT AUTONOMOUS START ===\n");
-    printf("SBOT: Running RoboDash selector\n");
-    printf("SBOT: selector.run_auton()\n");
-    fflush(stdout);
-
-    selector.run_auton();
-
-    printf("=== SBOT AUTONOMOUS COMPLETE ===\n");
-    fflush(stdout);
+    sbot_run_skills_auto();
 }
 
 void opcontrol() {
@@ -255,6 +246,8 @@ void opcontrol() {
     bool low_score_active = false;
     bool reverse_intake_active = false;  // Manual reverse intake mode
 
+    bool is_slow_mode = false;
+
     while (true) {
         // Periodic heartbeat and selector update
         uint32_t now = pros::millis();
@@ -266,15 +259,18 @@ void opcontrol() {
         }
 
         // Drivetrain tank drive control (left stick = left side, right stick = right side)
-        sbot_drive->tankControl(*sbot_master);
+        sbot_drive->tankControl(*sbot_master, false);
 
         // Alliance color and sorting toggles
-        if (sbot_master->get_digital_new_press(SBOT_SET_RED_ALLIANCE_BTN)) {
-            sbot_color_system->setAllianceColor(AllianceColor::RED);
-        }
-        if (sbot_master->get_digital_new_press(SBOT_SET_BLUE_ALLIANCE_BTN)) {
-            sbot_color_system->setAllianceColor(AllianceColor::BLUE);
-        }
+        //if (sbot_master->get_digital_new_press(SBOT_SET_RED_ALLIANCE_BTN)) {
+        //    sbot_color_system->setAllianceColor(AllianceColor::RED);
+        //}
+        //if (sbot_master->get_digital_new_press(SBOT_SET_BLUE_ALLIANCE_BTN)) {
+        //   sbot_color_system->setAllianceColor(AllianceColor::BLUE);
+        //}
+
+        
+
         if (sbot_master->get_digital_new_press(SBOT_COLOR_SORT_TOGGLE_BTN)) {
             sbot_color_system->setSortingEnabled(!sbot_color_system->isSortingEnabled());
         }
@@ -300,17 +296,35 @@ void opcontrol() {
             fflush(stdout);
         }
 
+        // 1. Pass the variable to the drivetrain (same as before)
+        // Note: We use 'batch_loader_latched_extended' directly now, 
+        // so you don't even need a separate 'is_slow_mode' variable if you don't want one.
+        // But to keep it readable, we can just sync them below.
+        sbot_drive->tankControl(*sbot_master, is_slow_mode);
+
+        // [REMOVE THE UP ARROW BLOCK ENTIRELY]
+
+        // 2. Modified Match Loader Logic
         if (sbot_master->get_digital_new_press(SBOT_BATCH_LOADER_TOGGLE_BTN)) {
             batch_loader_latched_extended = !batch_loader_latched_extended;
-            printf("SBOT: B pressed -> batch loader latched = %d\n", batch_loader_latched_extended ? 1 : 0);
+            
+            // --- SYNC SLOW MODE ---
+            // If loader is extended (down), slow mode is ON.
+            is_slow_mode = batch_loader_latched_extended; 
+
+            printf("SBOT: Match Loader %s -> Slow Mode %s\n", 
+                   batch_loader_latched_extended ? "DOWN" : "UP",
+                   is_slow_mode ? "ON" : "OFF");
             fflush(stdout);
+
+            // Hardware actions
             if (batch_loader_latched_extended) {
                 sbot_batch_loader->extend();
+                sbot_master->rumble("."); // Short rumble to feel the mode change
             } else {
                 sbot_batch_loader->retract();
             }
         }
-
         // Ball handling mode toggles (run until stopped)
         // R1 = storage/intake mode (same motors as top-score but flap forced DOWN)
         // R2 = top-score mode (same motors but flap UP)

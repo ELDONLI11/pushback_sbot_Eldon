@@ -16,8 +16,8 @@
 // DRIVETRAIN GEOMETRY (placeholders - tune later)
 // ============================================================================
 
-#define SBOT_DRIVE_TRACK_WIDTH        10.0   // inches between left/right wheels (measured)
-#define SBOT_DRIVE_RPM                200    // approx RPM for green gearset
+#define SBOT_DRIVE_TRACK_WIDTH        10.2   // inches between left/right wheels (measured)
+#define SBOT_DRIVE_RPM                600    // approx RPM for green gearset
 
 // Tracking wheel geometry (1D forward/backward pod near center)
 // NOTE: This is the lateral (left/right) offset of the vertical tracking wheel from the robot's rotation center.
