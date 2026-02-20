@@ -296,34 +296,35 @@ void opcontrol() {
             fflush(stdout);
         }
 
-        // 1. Pass the variable to the drivetrain (same as before)
-        // Note: We use 'batch_loader_latched_extended' directly now, 
-        // so you don't even need a separate 'is_slow_mode' variable if you don't want one.
-        // But to keep it readable, we can just sync them below.
-        sbot_drive->tankControl(*sbot_master, is_slow_mode);
+        // 1. Pass the Slow Mode state (based on loader position) to the drivetrain
+        // (This tells the drivetrain whether to cut speed or not)
+        bool is_match_load_mode = batch_loader_latched_extended;
+        sbot_drive->tankControl(*sbot_master, is_match_load_mode);
 
-        // [REMOVE THE UP ARROW BLOCK ENTIRELY]
-
-        // 2. Modified Match Loader Logic
+        // 2. Match Loader Toggle Logic
         if (sbot_master->get_digital_new_press(SBOT_BATCH_LOADER_TOGGLE_BTN)) {
+            // Toggle the state
             batch_loader_latched_extended = !batch_loader_latched_extended;
-            
-            // --- SYNC SLOW MODE ---
-            // If loader is extended (down), slow mode is ON.
-            is_slow_mode = batch_loader_latched_extended; 
 
-            printf("SBOT: Match Loader %s -> Slow Mode %s\n", 
-                   batch_loader_latched_extended ? "DOWN" : "UP",
-                   is_slow_mode ? "ON" : "OFF");
-            fflush(stdout);
-
-            // Hardware actions
             if (batch_loader_latched_extended) {
-                sbot_batch_loader->extend();
-                sbot_master->rumble("."); // Short rumble to feel the mode change
+                // --- ENTERING MATCH LOAD MODE ---
+                sbot_batch_loader->extend(); // Piston down
+                
+                // Lock the wheels so we don't bounce off the match load bar
+                sbot_drive->setBrakeMode(pros::v5::MotorBrake::hold);
+                
+                printf("SBOT: Match Load Mode ON (Hold + Slow)\n");
+                sbot_master->rumble("."); 
             } else {
-                sbot_batch_loader->retract();
+                // --- EXITING MATCH LOAD MODE ---
+                sbot_batch_loader->retract(); // Piston up
+                
+                // Free the wheels for smooth normal driving
+                sbot_drive->setBrakeMode(pros::v5::MotorBrake::coast);
+                
+                printf("SBOT: Match Load Mode OFF (Coast + Fast)\n");
             }
+            fflush(stdout);
         }
         // Ball handling mode toggles (run until stopped)
         // R1 = storage/intake mode (same motors as top-score but flap forced DOWN)

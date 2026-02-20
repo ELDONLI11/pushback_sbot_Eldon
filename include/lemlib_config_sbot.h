@@ -17,14 +17,14 @@
 // ============================================================================
 
 #define SBOT_DRIVE_TRACK_WIDTH        10.2   // inches between left/right wheels (measured)
-#define SBOT_DRIVE_RPM                600    // approx RPM for green gearset
+#define SBOT_DRIVE_RPM                480    // approx RPM for green gearset
 
 // Tracking wheel geometry (1D forward/backward pod near center)
 // NOTE: This is the lateral (left/right) offset of the vertical tracking wheel from the robot's rotation center.
 // If this is wrong, you'll see Y drift during in-place turns (rectangle test).
 // Experimental estimate from in-place turn calibration (Test: Turn): ~0.06".
 // If turn-induced drift direction worsens, flip the sign.
-#define SBOT_TRACKING_WHEEL_DISTANCE  0.085
+//#define SBOT_TRACKING_WHEEL_DISTANCE  0.085
 
 // ============================================================================
 // GLOBAL LEMLIB OBJECTS (pointers)

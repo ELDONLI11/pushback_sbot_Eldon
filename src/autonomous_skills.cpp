@@ -72,6 +72,7 @@ void sbot_run_skills_auto() {
     sbot_print_pose("skills start");
 
     // Convert Jerry coords to robot-relative
+    auto test_point = sbot_from_jerry_rotated(SKILLS_TO_MATCH_LOADER_JERRY_X, 77.3);
     auto to_match_loader = sbot_from_jerry_rotated(SKILLS_TO_MATCH_LOADER_JERRY_X, SKILLS_TO_MATCH_LOADER_JERRY_Y);
     auto match_loader_contact_red = sbot_from_jerry_rotated(SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_X, SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_Y);
     auto match_loader_retreat = sbot_from_jerry_rotated(SKILLS_MATCH_LOADER_RETREAT_JERRY_X, SKILLS_MATCH_LOADER_RETREAT_JERRY_Y);
@@ -81,30 +82,49 @@ void sbot_run_skills_auto() {
     auto long_goal_contact = sbot_from_jerry_rotated(SKILLS_LONG_GOAL_CONTACT_JERRY_X, SKILLS_LONG_GOAL_CONTACT_JERRY_Y);
     auto long_goal_retreat = sbot_from_jerry_rotated(SKILLS_LONG_GOAL_RETREAT_JERRY_X, SKILLS_LONG_GOAL_RETREAT_JERRY_Y);
     auto match_loader_contact_blue = sbot_from_jerry_rotated(SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_X, SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_Y);
-    auto park_point_one = sbot_from_jerry_rotated(SKILLS_PARK_POINT_ONE_JERRY_X, SKILLS_PARK_POINT_ONE_JERRY_Y);
-    auto park_final = sbot_from_jerry_rotated(SKILLS_PARK_FINAL_JERRY_X, SKILLS_PARK_FINAL_JERRY_Y);
+    auto right_matchload_align = sbot_from_jerry_rotated(SKILLS_RIGHT_MATCHLOAD_ALIGN_X, SKILLS_RIGHT_MATCHLOAD_ALIGN_Y);
+    auto park_red = sbot_from_jerry_rotated(SKILLS_PARK_RED_JERRY_X, SKILLS_PARK_RED_JERRY_Y);
 
 
+    
+    //------Start of AUTO-------
+    
     sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
+    sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
     sbot_intake->update();
+    sbot_indexer->update();
     printf("Intake set to COLLECT_FORWARD at start\n");
     sbot_print_jerry_pose_rotated("skills start");
+
+
     // 2. Match Load Approach
     sbot_drive_to(to_match_loader, 10000, false, true); // 1/4 speed
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After drive to match loader");
     
-    sbot_turn_to(SKILLS_MATCHLOADER_RED_HEADING, 1000);
-    sbot_chassis->waitUntilDone();
-    sbot_print_jerry_pose_rotated("After turn to matchloader heading");
 
     // Extend loader and start intake during turn
     if (sbot_batch_loader) sbot_batch_loader->extend();
 
+
+    sbot_turn_to(SKILLS_MATCHLOADER_RED_HEADING, 1000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to matchloader heading");
+
+
     // 3. Match Loading (with Anti-Stall)
-    moveToPointWithAntiStall(match_loader_contact_red.x, match_loader_contact_red.y, SKILLS_MATCHLOADER_RED_HEADING, 10000, 70);
+    //set robot to hold mode
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+
+    sbot_drive_to(match_loader_contact_red, 2000, false, true, 40.0);
+    sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After anti-stall move to match loader contact red");
-    pros::delay(3000); // Wait 3s to collect balls
+    pros::delay(2000); // Wait 2s to collect balls
+
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+
 
     // 4. Retreat & Realign
     sbot_drive_to(match_loader_retreat, 10000, false, false);  // backwards
@@ -114,6 +134,8 @@ void sbot_run_skills_auto() {
     if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
     if (sbot_indexer) sbot_indexer->setMode(IndexerMode::OFF);
     if (sbot_batch_loader) sbot_batch_loader->retract();
+    sbot_intake->update();
+    sbot_indexer->update();
     
     sbot_turn_to(SKILLS_GOING_AROUND_LONG_GOAL_HEADING, 1000);
     sbot_chassis->waitUntilDone();
@@ -121,29 +143,39 @@ void sbot_run_skills_auto() {
     sbot_drive_to(going_around_long, 10000, false, true);  // 1/4 speed
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After going around long goal");
+    
+    
     // 5. Cross Field
     sbot_turn_to(SKILLS_GOING_ACROSS_LONG_GOAL_HEADING, 1000);
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After turn to cross field");
-    sbot_drive_to(going_across_long, 10000, false, true);  // 1/4 speed
+    sbot_drive_to(going_across_long, 10000, false, true, 60.0);  // 1/4 speed
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After crossing field");
+    
     // 6. Align for Goal
     sbot_turn_to(SKILLS_ALIGNING_TO_LONG_GOAL_HEADING, 10000);
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After turn to align for goal");
+    
+    
     sbot_drive_to(aligning_to_long, 10000, false, true);  // 1/4 speed
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After drive to align for goal");
     
     if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
-    
+    if (sbot_indexer) sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
+    sbot_intake->update();
+    sbot_indexer->update();
+
     // 7. Scoring Routine (Long Goal)
     sbot_turn_to(SKILLS_LONG_GOAL_CONTACT_HEADING, 10000);
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After turn to long goal contact");
+    
     // Score Step 1: Move backward to contact
-    moveToPointWithAntiStall(long_goal_contact.x, long_goal_contact.y, SKILLS_LONG_GOAL_CONTACT_HEADING, 10000, 90, false);
+    moveToPointWithAntiStall(long_goal_contact.x, long_goal_contact.y, SKILLS_LONG_GOAL_CONTACT_HEADING, 10000, 60, false);
+    sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After anti-stall move to long goal contact");
     
     if (sbot_goal_flap) sbot_goal_flap->open();  // Lift scoring flap
@@ -151,11 +183,19 @@ void sbot_run_skills_auto() {
     pros::delay(5000); // Wait 5s to score
 
     // Reload Step: Move forward to blue loader
+
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+
+    moveToPointWithAntiStall(match_loader_contact_blue.x, match_loader_contact_blue.y, SKILLS_MATCHLOADER_BLUE_HEADING, 2000, 40, true);
     if (sbot_goal_flap) sbot_goal_flap->close();  // Flap down BEFORE moving
     
-    moveToPointWithAntiStall(match_loader_contact_blue.x, match_loader_contact_blue.y, SKILLS_MATCHLOADER_BLUE_HEADING, 10000, 70, true);
     sbot_print_jerry_pose_rotated("After anti-stall move to match loader contact blue");
-    pros::delay(3000); // Wait 3s to collect
+    pros::delay(3000); // Wait 3s to 
+    
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+
     // Score Step 2: Move backward to long goal (slower at end)
     moveToPointWithAntiStall(long_goal_contact.x, long_goal_contact.y, SKILLS_LONG_GOAL_CONTACT_HEADING, 10000, 70, false);
     sbot_print_jerry_pose_rotated("After anti-stall move back to long goal for scoring");
@@ -169,29 +209,125 @@ void sbot_run_skills_auto() {
     sbot_chassis->waitUntilDone();
     sbot_print_jerry_pose_rotated("After final push forward 5 inches");
     
-    if (sbot_batch_loader) sbot_batch_loader->extend();
+    if (sbot_batch_loader) sbot_batch_loader->retract();
     if (sbot_goal_flap) sbot_goal_flap->close();
+
+    pros::delay(250); // Brief pause before final move
     
     // Push: Move backward slowly to long goal
-    moveToPointWithAntiStall(long_goal_contact.x, long_goal_contact.y, SKILLS_LONG_GOAL_CONTACT_HEADING, 10000, 50, false);
+    moveToPointWithAntiStall(long_goal_contact.x, long_goal_contact.y, SKILLS_LONG_GOAL_CONTACT_HEADING, 10000, 30, false);
     sbot_print_jerry_pose_rotated("After anti-stall final move to long goal");
-    // Park Leg 1: Curve to park point one
-    if (sbot_chassis) {
-        sbot_chassis->moveToPoint(park_point_one.x, park_point_one.y, 10000, {.forwards = true, .maxSpeed = 100, .earlyExitRange = 2});
-        sbot_chassis->waitUntilDone();
-        sbot_print_jerry_pose_rotated("After moving to park point one");
-    }
-    
-    if (sbot_intake) sbot_intake->setMode(IntakeMode::REVERSE_LOW_GOAL);
-    
-    // Park Leg 2: Curve to final park
-    if (sbot_chassis) {
-        sbot_chassis->moveToPoint(park_final.x, park_final.y, 10000, {.forwards = true, .maxSpeed = 100, .earlyExitRange = 2});
-        sbot_chassis->waitUntilDone();
-        sbot_print_jerry_pose_rotated("After moving to final park position");
-    }
-    
+    sbot_chassis->waitUntilDone();
+
     if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
+
+    pros::delay(250); // Brief pause before parking
+
+
+
+    sbot_zero_pose_and_sensors(long_goal_contact.x, long_goal_contact.y, sbot_chassis->getPose().theta); // Reset pose at long goal contact for accurate parking
+
+
+
+    sbot_chassis->moveToPoint(long_goal_retreat.x, long_goal_retreat.y, 10000, {.forwards = true, .maxSpeed = 70});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After final push forward 5 inches");
+    
+
+    sbot_turn_to(SKILLS_BLUE_PARK_HEADING, 10000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to blue park");
+
+    sbot_chassis->moveToPoint(right_matchload_align.x, right_matchload_align.y, 10000, {.forwards = true, .maxSpeed = 60});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After move to right match loader align");
+
+    //deploy matchloader
+    if (sbot_batch_loader) sbot_batch_loader->extend();
+
+    sbot_turn_to(SKILLS_MATCHLOADER_BLUE_HEADING, 10000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to match loader heading for parking");
+
+    //------------------------------------------------------------------------
+    //Start on the other side of the field, every point is the same, but mirrored across the Y axis and X axis, before the jerry conversion
+    //------------------------------------------------------------------------
+    auto right_match_loader_contact_red = sbot_from_jerry_rotated(SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_X, SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_Y*-1);
+    auto right_match_loader_retreat = sbot_from_jerry_rotated(SKILLS_MATCH_LOADER_RETREAT_JERRY_X * -1, SKILLS_MATCH_LOADER_RETREAT_JERRY_Y * -1);
+    auto right_going_around_long = sbot_from_jerry_rotated(SKILLS_GOING_AROUND_LONG_GOAL_JERRY_X * -1, SKILLS_GOING_AROUND_LONG_GOAL_JERRY_Y * -1);
+    auto right_going_across_long = sbot_from_jerry_rotated(SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_X * -1, SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_Y * -1);
+    auto right_aligning_to_long = sbot_from_jerry_rotated(SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_X * -1, SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_Y * -1);
+    auto right_long_goal_contact = sbot_from_jerry_rotated(SKILLS_LONG_GOAL_CONTACT_JERRY_X * -1, SKILLS_LONG_GOAL_CONTACT_JERRY_Y * -1);
+
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::hold);
+
+    sbot_drive_to(right_match_loader_contact_red, 2000, false, true, 40.0);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right match loader contact red");
+
+    pros::delay(3000); // Wait 3s to collect balls
+
+    sbot_left_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+    sbot_right_motors->set_brake_mode_all(pros::v5::MotorBrake::coast);
+
+    sbot_chassis->moveToPoint(right_match_loader_retreat.x, right_match_loader_retreat.y, 10000, {.forwards = false, .maxSpeed = 70});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right match loader retreat");
+
+    if (sbot_intake) sbot_intake->setMode(IntakeMode::OFF);
+    if (sbot_indexer) sbot_indexer->setMode(IndexerMode::OFF);
+    if (sbot_batch_loader) sbot_batch_loader->retract();
+    sbot_intake->update();
+    sbot_indexer->update();
+
+    sbot_chassis->turnToHeading(SKILLS_GOING_AROUND_LONG_GOAL_HEADING + 180, 1000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to right going around long");
+
+    sbot_chassis->moveToPoint(right_going_around_long.x, right_going_around_long.y, 10000, {.forwards = true, .maxSpeed = 60});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right going around long");
+
+    sbot_chassis->turnToHeading(SKILLS_GOING_ACROSS_LONG_GOAL_HEADING + 180, 1000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to right going across long");
+
+    sbot_chassis->moveToPoint(right_going_across_long.x, right_going_across_long.y, 10000, {.forwards = true, .maxSpeed = 70});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right going across long");
+
+    sbot_chassis->turnToHeading(SKILLS_ALIGNING_TO_LONG_GOAL_HEADING + 180, 1000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to right aligning to long");
+
+    sbot_chassis->moveToPoint(right_aligning_to_long.x, right_aligning_to_long.y, 10000, {.forwards = true, .maxSpeed = 60});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right aligning to long");
+
+    if (sbot_intake) sbot_intake->setMode(IntakeMode::COLLECT_FORWARD);
+    if (sbot_indexer) sbot_indexer->setMode(IndexerMode::FEED_FORWARD);
+    sbot_intake->update();
+    sbot_indexer->update();
+   
+    sbot_chassis->turnToHeading(SKILLS_LONG_GOAL_CONTACT_HEADING + 180, 1000);
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After turn to right long goal contact");
+
+    sbot_chassis->moveToPoint(right_long_goal_contact.x, right_long_goal_contact.y, 1000, {.forwards = false, .maxSpeed = 60});
+    sbot_chassis->waitUntilDone();
+    sbot_print_jerry_pose_rotated("After drive to right long goal contact");
+
+    if (sbot_goal_flap) sbot_goal_flap->open();  // Lift scoring flap
+    pros::delay(3000); // Wait 3s to score
+
+    sbot_zero_pose_and_sensors( right_long_goal_contact.x, right_long_goal_contact.y, sbot_chassis->getPose().theta); // Reset pose at long goal contact for accurate parking
+
+
+
+    sbot_chassis->moveToPose(park_red.x, park_red.y, 0, 10000, {.forwards = true, .maxSpeed = 120, .minSpeed = 100});
+    sbot_chassis->waitUntilDone();
+
     sbot_safe_stop_mechanisms();
     
     printf("SBOT AUTON: SKILLS complete\n");

@@ -165,48 +165,48 @@ namespace RedRight {
 // ----------------------------------------------------------------------------
 namespace Skills {
     static constexpr double SKILLS_JERRY_START_X_BASE = -46.3;
-    static constexpr double SKILLS_JERRY_START_Y_BASE = 16.7;
+    static constexpr double SKILLS_JERRY_START_Y_BASE = 17.2;
 
     //Going to match loader
     static constexpr double SKILLS_TO_MATCH_LOADER_JERRY_X = -46.3;
     static constexpr double SKILLS_TO_MATCH_LOADER_JERRY_Y = 47.0;
 
     // Match loader contact point
-    static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_X = -70.0;
+    static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_X = -58.0;
     static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_X = -44.0;
+    static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_X = -49.0;
     static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_X = -28.0;
-    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_Y = 61;
+    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_X = -27.0;
+    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_Y = 60.0;
 
-    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_X = 33.0;
-    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_Y = 61;
+    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_X = 30.0;
+    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_Y = 60.0;
 
-    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_X = 45.0;
+    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_X = 42.0;
     static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_X = 24.0;
+    static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_X = 25.0;
     static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_X = 70.0;
+    static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_X = 60.0;
     static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_X = 39.0;
+    static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_X = 33.0;
     static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_PARK_POINT_ONE_JERRY_X = 57.0;
-    static constexpr double SKILLS_PARK_POINT_ONE_JERRY_Y = 39.0;
+    static constexpr double SKILLS_RIGHT_MATCHLOAD_ALIGN_X = 33.0; 
+    static constexpr double SKILLS_RIGHT_MATCHLOAD_ALIGN_Y = -47.0;
 
-    //static constexpr double SKILLS_PARK_POINT_TWO_JERRY_X = 61.0;
-    //static constexpr double SKILLS_PARK_POINT_TWO_JERRY_Y = 27.0;
+    static constexpr double SKILLS_PARK_RED_JERRY_X = -62.0;
+    static constexpr double SKILLS_PARK_RED_JERRY_Y = 20.0;
 
-    //static constexpr double SKILLS_PARK_POINT_THREE_JERRY_X = 63.0;
-    //static constexpr double SKILLS_PARK_POINT_THREE_JERRY_Y = 16.0;
 
-    static constexpr double SKILLS_PARK_FINAL_JERRY_X = 63.0;
-    static constexpr double SKILLS_PARK_FINAL_JERRY_Y = 0.0;
+
+
+
+
 
 
 
@@ -219,6 +219,7 @@ namespace Skills {
     static constexpr double SKILLS_MATCHLOADER_BLUE_HEADING = 90.0;
     static constexpr double SKILLS_PARK_ONE_HEADING = 161.33;
     static constexpr double SKILLS_PARK_FINAL_HEADING = 180.0;
+    static constexpr double SKILLS_BLUE_PARK_HEADING = 180.0;
 
 
 }

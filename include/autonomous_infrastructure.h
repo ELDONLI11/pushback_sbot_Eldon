@@ -183,7 +183,7 @@ void sbot_wait_until_pose_close_or_timeout_timed(
 bool sbot_drive_to(const SbotPoint& p, uint32_t timeout_ms, bool mirrored_y = false, bool forwards = true, float speed = 60.0);
 
 // Turn to a heading (basic, with optional Y-mirror)
-bool sbot_turn_to(double heading_deg, uint32_t timeout_ms, bool mirrored_y = false, float speed = 60.0);
+bool sbot_turn_to(double heading_deg, uint32_t timeout_ms, bool mirrored_y = false, float speed = 80.0);
 
 // Auto-transformed movement (handles side and alliance mirroring)
 bool sbot_auto_drive_to(const SbotPoint& p, uint32_t timeout_ms, SbotAutoSide side, SbotAutoAlliance alliance, bool forwards = true);
