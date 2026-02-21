@@ -97,12 +97,12 @@ void initializeSbotLemLib() {
     sbot_linear_controller = new lemlib::ControllerSettings(
         18,   // kP
         0,    // kI
-        100,   // kD
+        125,   // kD
         0,    // windup
         0.5,  // small error (in)
-        150,  // small error timeout (ms)
+        100,  // small error timeout (ms)
         1.0,  // large error (in)
-        300,  // large error timeout (ms)
+        150,  // large error timeout (ms)
         2    // max acceleration (units/s^2) - limits how fast speed changes
               // Higher = faster but more tipping. 0 = unlimited. Try 30-80.
     );
@@ -113,9 +113,9 @@ void initializeSbotLemLib() {
         22.0, // kD
         0,    // windup
         1.0,  // small error (deg)
-        150,  // small error timeout (ms)
+        100,  // small error timeout (ms)
         3.0,  // large error (deg)
-        250,  // large error timeout (ms)
+        150,  // large error timeout (ms)
         40    // max acceleration (deg/s^2) - limits rotation speed changes
               // Higher = faster turns but more tipping. 0 = unlimited. Try 30-60.
     );

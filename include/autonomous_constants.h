@@ -172,35 +172,38 @@ namespace Skills {
     static constexpr double SKILLS_TO_MATCH_LOADER_JERRY_Y = 47.0;
 
     // Match loader contact point
-    static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_X = -58.0;
+    static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_X = -57.5;
     static constexpr double SKILLS_MATCH_LOADER_CONTACT_RED_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_X = -49.0;
+    static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_X = -51.0;
     static constexpr double SKILLS_MATCH_LOADER_RETREAT_JERRY_Y = 47.0;
 
-    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_X = -27.0;
-    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_Y = 60.0;
+    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_X = -32.0;
+    static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_JERRY_Y = 58.25;
 
     static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_X = 30.0;
-    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_Y = 60.0;
+    static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_JERRY_Y = 58.25;
 
     static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_X = 42.0;
-    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_Y = 47.0;
+    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_JERRY_Y = 46.5;
 
     static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_X = 25.0;
-    static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_Y = 47.0;
+    static constexpr double SKILLS_LONG_GOAL_CONTACT_JERRY_Y = 46.5;
 
     static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_X = 60.0;
-    static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_Y = 47.0;
+    static constexpr double SKILLS_MATCH_LOADER_CONTACT_BLUE_JERRY_Y = 46.5;
 
     static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_X = 33.0;
-    static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_Y = 47.0;
+    static constexpr double SKILLS_LONG_GOAL_RETREAT_JERRY_Y = 46.5;
+
+    static constexpr double SKILLS_RIGHT_LONG_GOAL_RETREAT_X = 33.0;
+    static constexpr double SKILLS_RIGHT_LONG_GOAL_RETREAT_Y = 39.0;
 
     static constexpr double SKILLS_RIGHT_MATCHLOAD_ALIGN_X = 33.0; 
-    static constexpr double SKILLS_RIGHT_MATCHLOAD_ALIGN_Y = -47.0;
+    static constexpr double SKILLS_RIGHT_MATCHLOAD_ALIGN_Y = -48.0;
 
     static constexpr double SKILLS_PARK_RED_JERRY_X = -62.0;
-    static constexpr double SKILLS_PARK_RED_JERRY_Y = 20.0;
+    static constexpr double SKILLS_PARK_RED_JERRY_Y = 27.0;
 
 
 
@@ -214,7 +217,7 @@ namespace Skills {
     static constexpr double SKILLS_MATCHLOADER_RED_HEADING = 270.0;
     static constexpr double SKILLS_GOING_AROUND_LONG_GOAL_HEADING = 52.1;
     static constexpr double SKILLS_GOING_ACROSS_LONG_GOAL_HEADING = 90.0;
-    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_HEADING = 132.0;
+    static constexpr double SKILLS_ALIGNING_TO_LONG_GOAL_HEADING = 134.0;
     static constexpr double SKILLS_LONG_GOAL_CONTACT_HEADING = 90.0;
     static constexpr double SKILLS_MATCHLOADER_BLUE_HEADING = 90.0;
     static constexpr double SKILLS_PARK_ONE_HEADING = 161.33;
