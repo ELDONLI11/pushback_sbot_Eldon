@@ -17,6 +17,7 @@
 #include "robodash_selector.h"
 #include "lemlib_config_sbot.h"
 #include "autonomous_test_forward.h"
+#include "autonomous_infrastructure.h"
 
 // Upload script patches this to true for hardcoded backup slots (2-5).
 // When true, autonomous runs immediately without showing the RoboDash selector.
@@ -140,7 +141,7 @@ void competition_initialize() {
 }
 
 void autonomous() {
-    sbot_run_skills_auto();
+    sbot_run_red_right_auto();
 }
 
 void opcontrol() {

@@ -242,6 +242,9 @@ void sbot_score_low_for(uint32_t duration_ms);
 void sbot_lemlib_debug_window_begin(const char* label);
 void sbot_lemlib_debug_window_end(const char* label);
 
+
+void sbot_run_red_left_auto();
+void sbot_run_red_right_auto();
 // ============================================================================
 // VALIDATION
 // ============================================================================

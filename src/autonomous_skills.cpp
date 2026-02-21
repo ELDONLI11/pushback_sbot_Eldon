@@ -208,7 +208,7 @@ void sbot_run_skills_auto() {
 
     // 3. Launch a background task to act as our 300ms watchdog timer
     pros::Task watchdog_task([&movement_done]() {
-        pros::delay(250); // Wait the maximum allowed reverse time
+        pros::delay(200); // Wait the maximum allowed reverse time
 
         // If the chassis is STILL moving after 300ms, turn the intake off safely
         if (!movement_done) {
@@ -466,7 +466,7 @@ void sbot_run_skills_auto() {
 
     // 3. Launch a background task to act as our 500ms watchdog timer
     pros::Task watchdog_task_3([&movement_done]() {
-        pros::delay(500); // Wait the maximum allowed reverse time
+        pros::delay(200); // Wait the maximum allowed reverse time
 
         // If the chassis is STILL moving after 500ms, turn the intake off safely
         if (!movement_done) {

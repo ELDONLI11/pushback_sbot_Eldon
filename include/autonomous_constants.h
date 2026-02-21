@@ -93,35 +93,24 @@ static constexpr bool SBOT_PRINT_WAIT_TIMES = true;
 // ----------------------------------------------------------------------------
 namespace RedLeft {
     // Ring clusters
-    static constexpr double CLUSTER1_JERRY_X = -17.0;
-    static constexpr double CLUSTER1_JERRY_Y = 26.0;
-    
-    static constexpr double CLUSTER2_JERRY_X = 17.0;
-    static constexpr double CLUSTER2_JERRY_Y = 26.0;
-    
-    // Center Goal - Lower (front bumper contact point)
-    static constexpr double CENTER_LOW_GOAL_JERRY_X = -9.0;
-    static constexpr double CENTER_LOW_GOAL_JERRY_Y = 9.0;
+    static constexpr double CLUSTER1_JERRY_X = -21.0;
+    static constexpr double CLUSTER1_JERRY_Y = 21.0;
     
     // Center Goal - Middle (back bumper contact point)
-    static constexpr double CENTER_MID_GOAL_JERRY_X = -2.7;
-    static constexpr double CENTER_MID_GOAL_JERRY_Y = 4.2;
-    
-    // Solo Middle Goal (back bumper contact point, opposite side)
-    static constexpr double SOLO_MID_GOAL_JERRY_X = 7.0;
-    static constexpr double SOLO_MID_GOAL_JERRY_Y = 7.0;
+    static constexpr double CENTER_MID_GOAL_JERRY_X = -8.0;
+    static constexpr double CENTER_MID_GOAL_JERRY_Y = 8.0;
     
     // Post-score retreat point
-    static constexpr double RETREAT_POINT_JERRY_X = -48.0;
-    static constexpr double RETREAT_POINT_JERRY_Y = 48.0;
+    static constexpr double RETREAT_POINT_JERRY_X = -47.0;
+    static constexpr double RETREAT_POINT_JERRY_Y = 47.0;
     
     // Match loader contact point (front bumper)
-    static constexpr double LOADER_CONTACT_JERRY_X = -73.0;
-    static constexpr double LOADER_CONTACT_JERRY_Y = 48.0;
+    static constexpr double LOADER_CONTACT_JERRY_X = -57.5;
+    static constexpr double LOADER_CONTACT_JERRY_Y = 47.0;
     
     // Long goal end position
-    static constexpr double LONG_GOAL_END_JERRY_X = -21.0;
-    static constexpr double LONG_GOAL_END_JERRY_Y = 48.0;
+    static constexpr double LONG_GOAL_END_JERRY_X = -25.0;
+    static constexpr double LONG_GOAL_END_JERRY_Y = 47.0;
 }
 
 // ----------------------------------------------------------------------------
